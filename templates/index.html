@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Face Preprocessing Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f7f7f7;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .result {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 10px;
+            background: #f2f2f2;
+        }
+        img {
+            margin-top: 16px;
+            max-width: 100%;
+            border-radius: 10px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            background: #222;
+            color: white;
+            cursor: pointer;
+        }
+        input[type="file"] {
+            margin-bottom: 12px;
+        }
+        pre {
+            background: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Preprocessing Test Page</h1>
+        <p>Upload a JPG or PNG image to test the preprocessing pipeline.</p>
+
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".jpg,.jpeg,.png" required />
+            <br />
+            <button type="submit">Upload and Test</button>
+        </form>
+
+        {% if result %}
+        <div class="result">
+            <p class="{{ 'success' if result['success'] else 'fail' }}">
+                Success: {{ result['success'] }}
+            </p>
+            <p><strong>Message:</strong> {{ result['message'] }}</p>
+            <p><strong>Face BBox:</strong> {{ result['face_bbox'] }}</p>
+
+            <h3>Metadata</h3>
+            <pre>{{ result['metadata'] }}</pre>
+
+            {% if result['image_url'] %}
+            <h3>Uploaded Image</h3>
+            <img src="{{ result['image_url'] }}" alt="Uploaded image" />
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
