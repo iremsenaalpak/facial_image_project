@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import uuid
@@ -7,7 +8,9 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from modules.face_landmark import FaceLandmarkDetector
 from modules.preprocessing import run_preprocessing_pipeline
+from modules.visualization import visualize_face_data
 
 app = FastAPI(title="Face Preprocessing Demo")
 
@@ -34,16 +37,36 @@ def save_image(image, path):
     cv2.imwrite(path, image)
 
 
-def render_home_page(message="", images=None, metadata=None, face_bbox=None, success=None):
+def render_home_page(
+    message="",
+    images=None,
+    metadata=None,
+    face_bbox=None,
+    success=None,
+    landmark_success=None,
+    landmark_count=None,
+    grouped_landmark_keys=None,
+    landmark_message=None,
+    landmark_json=None
+):
     result_section = ""
 
     if images:
+        grouped_landmark_keys = grouped_landmark_keys or []
+
         result_section = f"""
         <div class="result">
             <p class="{'success' if success else 'fail'}">Success: {success}</p>
             <p><strong>Message:</strong> {message}</p>
             <p><strong>Face BBox:</strong> {face_bbox}</p>
             <p><strong>Metadata:</strong> {metadata}</p>
+
+            <hr style="margin: 18px 0;">
+
+            <p><strong>Landmark Success:</strong> {landmark_success}</p>
+            <p><strong>Landmark Count:</strong> {landmark_count}</p>
+            <p><strong>Landmark Message:</strong> {landmark_message}</p>
+            <p><strong>Grouped Landmark Keys:</strong> {grouped_landmark_keys}</p>
 
             <div class="grid">
                 <div class="card">
@@ -70,6 +93,21 @@ def render_home_page(message="", images=None, metadata=None, face_bbox=None, suc
                     <h3>Grayscale Face</h3>
                     <img src="{images['grayscale']}" alt="Grayscale Face">
                 </div>
+
+                <div class="card">
+                    <h3>Landmarks (Full)</h3>
+                    <img src="{images['landmark_full']}" alt="Full Landmark Image">
+                </div>
+
+                <div class="card">
+                    <h3>Landmarks (Grouped)</h3>
+                    <img src="{images['landmark_grouped']}" alt="Grouped Landmark Image">
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 20px;">
+                <h3>Landmark JSON Preview</h3>
+                <pre>{landmark_json}</pre>
             </div>
         </div>
         """
@@ -95,7 +133,7 @@ def render_home_page(message="", images=None, metadata=None, face_bbox=None, suc
                 background: #f7f7f7;
             }}
             .container {{
-                max-width: 1100px;
+                max-width: 1200px;
                 margin: auto;
                 background: white;
                 padding: 24px;
@@ -147,12 +185,20 @@ def render_home_page(message="", images=None, metadata=None, face_bbox=None, suc
             input[type="file"] {{
                 margin-bottom: 12px;
             }}
+            pre {{
+                white-space: pre-wrap;
+                word-break: break-word;
+                background: #fafafa;
+                padding: 12px;
+                border-radius: 8px;
+                overflow-x: auto;
+            }}
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>Face Preprocessing Test Page</h1>
-            <p>Upload a JPG or PNG image to test the preprocessing pipeline.</p>
+            <h1>Face Preprocessing + Landmark Test Page</h1>
+            <p>Upload a JPG or PNG image to test preprocessing and landmark detection.</p>
 
             <form action="/upload" method="post" enctype="multipart/form-data">
                 <input type="file" name="file" accept=".jpg,.jpeg,.png" required />
@@ -214,24 +260,85 @@ async def upload_image(file: UploadFile = File(...)):
 
     bbox_image = draw_bbox(original_image, face_bbox)
 
+    # Landmark detection için kullanılacak görsel
+    face_image = resized_face if resized_face is not None else cropped_face
+
+    landmark_success = False
+    landmark_count = 0
+    grouped_landmark_keys = []
+    landmark_message = "Landmark detection was not run."
+    landmark_json_text = "No landmark data."
+    landmark_full_image = face_image.copy() if face_image is not None else original_image.copy()
+    landmark_grouped_image = face_image.copy() if face_image is not None else original_image.copy()
+
+    if face_image is not None:
+        if len(face_image.shape) == 2:
+            face_image = cv2.cvtColor(face_image, cv2.COLOR_GRAY2BGR)
+
+        detector = FaceLandmarkDetector()
+        landmark_result = detector.detect(face_image)
+
+        landmark_success = landmark_result["success"]
+        landmark_count = len(landmark_result["landmarks"])
+        grouped_landmark_keys = list(landmark_result["grouped_landmarks"].keys())
+        landmark_message = landmark_result["message"]
+
+        if landmark_result["success"]:
+            landmark_full_image = visualize_face_data(
+                image=face_image,
+                bbox=landmark_result["bbox"],
+                landmarks=landmark_result["landmarks"],
+                grouped_landmarks=landmark_result["grouped_landmarks"],
+                show_bbox=True,
+                show_landmarks=True,
+                use_grouped=False
+            )
+
+            landmark_grouped_image = visualize_face_data(
+                image=face_image,
+                bbox=landmark_result["bbox"],
+                landmarks=landmark_result["landmarks"],
+                grouped_landmarks=landmark_result["grouped_landmarks"],
+                show_bbox=True,
+                show_landmarks=True,
+                use_grouped=True
+            )
+
+            preview_data = {
+                "bbox": landmark_result["bbox"],
+                "landmark_count": landmark_count,
+                "grouped_landmark_keys": grouped_landmark_keys,
+                "image_size": landmark_result["image_size"],
+                "message": landmark_result["message"]
+            }
+            landmark_json_text = json.dumps(preview_data, indent=4, ensure_ascii=False)
+
+        detector.close()
+
     original_result_path = os.path.join(RESULT_DIR, f"{unique_id}_original.jpg")
     bbox_result_path = os.path.join(RESULT_DIR, f"{unique_id}_bbox.jpg")
     cropped_result_path = os.path.join(RESULT_DIR, f"{unique_id}_cropped.jpg")
     resized_result_path = os.path.join(RESULT_DIR, f"{unique_id}_resized.jpg")
     grayscale_result_path = os.path.join(RESULT_DIR, f"{unique_id}_grayscale.jpg")
+    landmark_full_result_path = os.path.join(RESULT_DIR, f"{unique_id}_landmark_full.jpg")
+    landmark_grouped_result_path = os.path.join(RESULT_DIR, f"{unique_id}_landmark_grouped.jpg")
 
     save_image(original_image, original_result_path)
     save_image(bbox_image, bbox_result_path)
     save_image(cropped_face, cropped_result_path)
     save_image(resized_face, resized_result_path)
     save_image(grayscale_face, grayscale_result_path)
+    save_image(landmark_full_image, landmark_full_result_path)
+    save_image(landmark_grouped_image, landmark_grouped_result_path)
 
     image_urls = {
         "original": f"/results/{unique_id}_original.jpg",
         "bbox": f"/results/{unique_id}_bbox.jpg",
         "cropped": f"/results/{unique_id}_cropped.jpg",
         "resized": f"/results/{unique_id}_resized.jpg",
-        "grayscale": f"/results/{unique_id}_grayscale.jpg"
+        "grayscale": f"/results/{unique_id}_grayscale.jpg",
+        "landmark_full": f"/results/{unique_id}_landmark_full.jpg",
+        "landmark_grouped": f"/results/{unique_id}_landmark_grouped.jpg"
     }
 
     return render_home_page(
@@ -239,7 +346,12 @@ async def upload_image(file: UploadFile = File(...)):
         images=image_urls,
         metadata=result["metadata"],
         face_bbox=result["face_bbox"],
-        success=True
+        success=True,
+        landmark_success=landmark_success,
+        landmark_count=landmark_count,
+        grouped_landmark_keys=grouped_landmark_keys,
+        landmark_message=landmark_message,
+        landmark_json=landmark_json_text
     )
 
 
