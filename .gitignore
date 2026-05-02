@@ -1,6 +1,39 @@
+# Virtual Environments
 .venv/
+env/
+venv/
+
+# Python Cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Application Specific
 uploads/
 results/
+
+# OS & Logs
 .DS_Store
+*.log
+*.sqlite3
+
+# Environment Variables
+.env
+.env.local
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+__pyrefly_virtual__/
+
+# AI Assistants
+.claude/
+.claudesync/
+.cursor/
+.cursorrules
+.gemini/
+.copilot/
