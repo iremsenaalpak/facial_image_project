@@ -4,7 +4,7 @@ from modules.preprocessing import run_preprocessing_pipeline
 from modules.face_landmark import FaceLandmarkDetector
 from modules.visualization import visualize_face_data
 from utils.helpers import save_landmarks_to_json, ensure_directory
-
+from modules.aging import aging_deaging_pipeline
 
 def main():
     file_path = "assets/test_images/sample.jpg"
@@ -70,7 +70,19 @@ def main():
             show_landmarks=True,
             use_grouped=True
         )
+        # Aging işlemi
+        aged_image = aging_deaging_pipeline(
+            face_image,
+            mode="aging",
+            intensity=0.7
+        )
 
+        # De-aging işlemi
+        deaged_image = aging_deaging_pipeline(
+           face_image,
+           mode="deaging",
+           intensity=0.45
+        )
         # 5) Kayıt klasörleri
         ensure_directory("results/images")
         ensure_directory("results/json")
@@ -80,6 +92,14 @@ def main():
 
         # Görsel kaydet
         cv2.imwrite(output_image_path, visualized_image)
+        aged_output_path = "results/images/aged_result.jpg"
+        deaged_output_path = "results/images/deaged_result.jpg"
+
+        cv2.imwrite(aged_output_path, aged_image)
+        cv2.imwrite(deaged_output_path, deaged_image)
+
+        print("Saved aged image:", aged_output_path)
+        print("Saved de-aged image:", deaged_output_path)
 
         # JSON kaydet
         save_landmarks_to_json(landmark_result, output_json_path)
