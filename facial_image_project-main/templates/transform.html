@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FaceLab Studio</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <form action="/transform" method="post" enctype="multipart/form-data">
+
+        <div class="main-grid">
+
+            <!-- LEFT PANEL -->
+            <aside class="panel">
+
+                <div class="sidebar-logo horizontal-logo">
+    <div class="logo-icon face-icon">☺</div>
+
+    <div class="logo-text">
+        <h1>Open Transform <span>Studio</span></h1>
+        <p>Facial Warping • Aging • Frequency Analysis</p>
+    </div>
+</div>
+                <div class="panel-title">INPUT</div>
+
+                <label>Upload Face Image</label>
+
+                <input
+                    type="file"
+                    id="fileInput"
+                    name="file"
+                    accept=".jpg,.jpeg,.png"
+                    required
+                >
+
+                <div class="panel-title">TRANSFORMATION</div>
+
+                <label>Expression Mode</label>
+
+                <select name="mode">
+
+                    <option value="none">None</option>
+
+                    <option value="smile">
+                        Smile Enhancement
+                    </option>
+
+                    <option value="eyebrow_raise">
+                        Eyebrow Raise
+                    </option>
+
+                    <option value="lip_widen">
+                        Lip Widening
+                    </option>
+
+                    <option value="face_slim">
+                        Face Slimming
+                    </option>
+
+                    <option value="aging">
+                        Aging
+                    </option>
+
+                    <option value="deaging">
+                        De-aging
+                    </option>
+
+                </select>
+
+                <label>Intensity</label>
+
+                <div class="slider-row">
+
+                    <input
+                        type="range"
+                        id="intensitySlider"
+                        name="intensity"
+                        min="0.1"
+                        max="2.0"
+                        step="0.1"
+                        value="1.0"
+                    >
+
+                    <span id="sliderValue">1.0</span>
+
+                </div>
+
+                <div class="panel-title">GLASSES STYLE</div>
+
+                <div class="glasses-grid">
+
+                    <label class="glasses-card">
+                        <input type="radio" name="glasses_style" value="none" checked>
+                        <span>✕</span>
+                        <small>None</small>
+                    </label>
+
+                    <label class="glasses-card">
+                        <input type="radio" name="glasses_style" value="round">
+                        <span>○—○</span>
+                        <small>Round</small>
+                    </label>
+
+                    <label class="glasses-card">
+                        <input type="radio" name="glasses_style" value="square">
+                        <span>▭—▭</span>
+                        <small>Square</small>
+                    </label>
+
+                    <label class="glasses-card">
+                        <input type="radio" name="glasses_style" value="aviator">
+                        <span>◒—◒</span>
+                        <small>Aviator</small>
+                    </label>
+
+                    <label class="glasses-card">
+                        <input type="radio" name="glasses_style" value="cateye">
+                        <span>◢—◣</span>
+                        <small>Cat-eye</small>
+                    </label>
+
+                </div>
+
+                <div class="panel-title">CREATIVE FEATURES</div>
+
+                <label class="check-row">
+                    <input type="checkbox" name="creative" value="lip_color">
+                    Lip Coloring
+                </label>
+
+                <input
+                    type="color"
+                    name="lip_color_hex"
+                    value="#c0392b"
+                >
+
+                <label class="check-row">
+                    <input type="checkbox" name="creative" value="hair_color">
+                    Hair Coloring
+                </label>
+
+                <input
+                    type="color"
+                    name="hair_color_hex"
+                    value="#4a2c0a"
+                >
+
+                <label class="check-row">
+                    <input type="checkbox" name="creative" value="eye_color">
+                    Eye Color
+                </label>
+
+                <input
+                    type="color"
+                    name="eye_color_hex"
+                    value="#1e6db5"
+                >
+
+                <label class="check-row">
+                    <input type="checkbox" name="creative" value="frame_photo">
+                    Photo Frame
+                </label>
+
+                <label>Frame Style</label>
+
+                <select name="frame_style">
+
+                    <option value="classic">Classic</option>
+
+                    <option value="modern">Modern</option>
+
+                    <option value="polaroid">Polaroid</option>
+
+                    <option value="vintage">Vintage</option>
+
+                </select>
+
+                <div class="panel-title">STICKER EFFECTS</div>
+
+                <label>Sticker Effect</label>
+
+                <select name="sticker_effect">
+
+                    <option value="none">None</option>
+
+                    <option value="emoji_heart">
+                        Heart Emoji
+                    </option>
+
+                    <option value="emoji_star">
+                        Star Emoji
+                    </option>
+
+                    <option value="crown">
+                        Crown
+                    </option>
+
+                    <option value="cat_ears">
+                        Cat Ears
+                    </option>
+
+                    <option value="sparkles">
+                        Sparkles
+                    </option>
+
+                    <option value="freckles">
+                        Freckles
+                    </option>
+
+                </select>
+
+                <button type="submit" id="transformBtn">
+                    Run Transformation
+                </button>
+
+            </aside>
+
+            <!-- CENTER -->
+            <main class="panel">
+
+                <div class="panel-title">
+                    TRANSFORMATION PREVIEW
+                </div>
+
+                <div class="preview-grid">
+
+                    <div class="image-box">
+
+                        <h3>ORIGINAL IMAGE</h3>
+
+                        {% if original_image %}
+
+                            <img
+                                id="originalPreview"
+                                src="{{ original_image }}"
+                                alt="Original Image"
+                            >
+
+                        {% else %}
+
+                            <img
+                                id="originalPreview"
+                                src=""
+                                alt="Original Preview"
+                                style="display:none;"
+                            >
+
+                            <div
+                                id="originalPlaceholder"
+                                class="placeholder"
+                            >
+                                Original image will appear here
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                    <div class="image-box">
+
+                        <h3>TRANSFORMED IMAGE</h3>
+
+                        {% if transformed_image %}
+
+                            <img
+                                src="{{ transformed_image }}"
+                                alt="Transformed Image"
+                            >
+
+                        {% else %}
+
+                            <div class="placeholder">
+                                Transformed image will appear here
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                {% if orig_spectrum and proc_spectrum %}
+
+                <div
+                    class="panel-title"
+                    style="margin-top:24px;"
+                >
+                    FREQUENCY DOMAIN ANALYSIS
+                </div>
+
+                <div class="preview-grid">
+
+                    <div class="image-box">
+
+                        <h3>ORIGINAL SPECTRUM</h3>
+
+                        <img
+                            src="{{ orig_spectrum }}"
+                            alt="Original Spectrum"
+                        >
+
+                    </div>
+
+                    <div class="image-box">
+
+                        <h3>TRANSFORMED SPECTRUM</h3>
+
+                        <img
+                            src="{{ proc_spectrum }}"
+                            alt="Transformed Spectrum"
+                        >
+
+                    </div>
+
+                </div>
+
+                {% endif %}
+
+                {% if frequency_table %}
+
+                <div class="analysis-card">
+
+                    <h3>
+                        Frequency Domain Energy Analysis
+                    </h3>
+
+                    {{ frequency_table | safe }}
+
+                </div>
+
+                {% endif %}
+
+                {% if evaluation_table %}
+
+                <div class="analysis-card">
+
+                    <h3>
+                        Quantitative Evaluation Metrics
+                    </h3>
+
+                    {{ evaluation_table | safe }}
+
+                </div>
+
+                {% endif %}
+
+            </main>
+
+            <!-- RIGHT PANEL -->
+            <aside class="panel">
+
+                <div class="panel-title">
+                    QUICK METRICS
+                </div>
+
+                <div class="metric-card">
+
+                    <strong>MSE</strong>
+
+                    <span>
+                        {{ mse if mse else "Calculated after transform" }}
+                    </span>
+
+                    <small>
+                        Lower value means less pixel-level difference.
+                    </small>
+
+                </div>
+
+                <div class="metric-card">
+
+                    <strong>PSNR</strong>
+
+                    <span>
+                        {{ psnr if psnr else "Calculated after transform" }}
+                    </span>
+
+                    <small>
+                        Higher value means better signal quality.
+                    </small>
+
+                </div>
+
+                <div class="metric-card">
+
+                    <strong>SSIM</strong>
+
+                    <span>
+                        {{ ssim if ssim else "Calculated after transform" }}
+                    </span>
+
+                    <small>
+                        Closer to 1 means higher structural similarity.
+                    </small>
+
+                </div>
+
+                <div class="metric-card">
+
+                    <strong>HF / LF Ratio</strong>
+
+                    <span>
+                        {{ ratio if ratio else "Frequency energy ratio" }}
+                    </span>
+
+                    <small>
+                        Shows high-frequency detail compared to low-frequency energy.
+                    </small>
+
+                </div>
+
+                {% if applied_mode %}
+
+                <div
+                    class="panel-title"
+                    style="margin-top:20px;"
+                >
+                    TRANSFORMATION INFO
+                </div>
+
+                <div class="metric-card">
+
+                    <strong>Mode</strong>
+
+                    <span>{{ applied_mode }}</span>
+
+                    <small>
+                        Final transformation mode applied by the system.
+                    </small>
+
+                </div>
+
+                <div class="metric-card">
+
+                    <strong>Intensity</strong>
+
+                    <span>{{ applied_intensity }}</span>
+
+                    <small>
+                        Strength of the transformation.
+                    </small>
+
+                </div>
+
+                {% endif %}
+
+                {% if csv_report and pdf_report %}
+
+                <div
+                    class="panel-title"
+                    style="margin-top:20px;"
+                >
+                    EXPORT
+                </div>
+
+                <a
+                    class="export-btn"
+                    href="{{ csv_report }}"
+                    download
+                >
+                    Download CSV
+                </a>
+
+                <a
+                    class="export-btn"
+                    href="{{ pdf_report }}"
+                    download
+                >
+                    Download PDF
+                </a>
+
+                {% endif %}
+
+            </aside>
+
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+
+const fileInput = document.getElementById("fileInput");
+
+const originalPreview =
+    document.getElementById("originalPreview");
+
+const originalPlaceholder =
+    document.getElementById("originalPlaceholder");
+
+if (fileInput && originalPreview) {
+
+    fileInput.addEventListener("change", function(e) {
+
+        const file = e.target.files[0];
+
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+
+            originalPreview.src = event.target.result;
+
+            originalPreview.style.display = "block";
+
+            if (originalPlaceholder) {
+                originalPlaceholder.style.display = "none";
+            }
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+const slider = document.getElementById("intensitySlider");
+
+const sliderValue =
+    document.getElementById("sliderValue");
+
+if (slider && sliderValue) {
+
+    slider.addEventListener("input", function() {
+
+        sliderValue.textContent = slider.value;
+
+    });
+}
+
+const form = document.querySelector("form");
+
+const button = document.getElementById("transformBtn");
+
+if (form && button) {
+
+    form.addEventListener("submit", function() {
+
+        button.innerHTML = "Processing...";
+
+        button.disabled = true;
+
+    });
+}
+
+</script>
+
+</body>
+</html>
