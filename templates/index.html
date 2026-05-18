@@ -2,176 +2,328 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Face Preprocessing Demo</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f7f7f7;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        .container {
-            max-width: 900px;
-            margin: auto;
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-        }
+    <title>FaceLab Studio</title>
 
-        h1,
-        h2,
-        h3 {
-            margin-top: 0;
-        }
-
-        .result {
-            margin-top: 24px;
-            padding: 16px;
-            border-radius: 10px;
-            background: #f2f2f2;
-        }
-
-        img {
-            margin-top: 16px;
-            max-width: 100%;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-        }
-
-        .success {
-            color: green;
-            font-weight: bold;
-        }
-
-        .fail {
-            color: red;
-            font-weight: bold;
-        }
-
-        button {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            background: #222;
-            color: white;
-            cursor: pointer;
-        }
-
-        input[type="file"] {
-            margin-bottom: 12px;
-        }
-
-        pre {
-            background: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .image-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 16px;
-        }
-
-        .card {
-            background: white;
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-        }
-
-        .info-row {
-            margin-bottom: 8px;
-        }
-
-        @media (max-width: 700px) {
-            .image-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 
 <body>
-    <div class="container">
-        <h1>Face Preprocessing + Landmark Test Page</h1>
-        <p>Upload a JPG or PNG image to test preprocessing, face detection, and landmark detection.</p>
 
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".jpg,.jpeg,.png" required />
-            <br />
-            <button type="submit">Upload and Test</button>
-        </form>
+<div class="dashboard">
 
-        <div style="margin-top:24px; padding:16px; background:#eef4ff; border-radius:10px; border:1px solid #c0d8f8;">
-            <strong>&#127774; Face Expression</strong>;
-            <a href="/transform" style="margin-left:12px; padding:8px 14px; background:#3366cc; color:white;
-               border-radius:8px; text-decoration:none; font-size:13px;">Open Transform Page &rarr;</a>
-        </div>
+    <!-- HEADER -->
+    <div class="header">
 
-        {% if result %}
-        <div class="result">
-            <p class="{{ 'success' if result['success'] else 'fail' }}">
-                Success: {{ result['success'] }}
+        <div class="logo">
+            <h1>FaceLab <span>Studio</span></h1>
+
+            <p>
+                Face Preprocessing • Landmark Detection • Frequency Analysis
             </p>
-
-            <div class="info-row"><strong>Message:</strong> {{ result['message'] }}</div>
-            <div class="info-row"><strong>Face BBox:</strong> {{ result['face_bbox'] }}</div>
-
-            {% if result['landmark_success'] is defined %}
-            <div class="info-row">
-                <strong>Landmark Success:</strong>
-                {{ result['landmark_success'] }}
-            </div>
-            {% endif %}
-
-            {% if result['landmark_count'] is defined %}
-            <div class="info-row">
-                <strong>Landmark Count:</strong>
-                {{ result['landmark_count'] }}
-            </div>
-            {% endif %}
-
-            {% if result['grouped_landmark_keys'] %}
-            <div class="info-row">
-                <strong>Grouped Landmark Keys:</strong>
-                {{ result['grouped_landmark_keys'] }}
-            </div>
-            {% endif %}
-
-            <h3>Metadata</h3>
-            <pre>{{ result['metadata'] }}</pre>
-
-            <div class="image-grid">
-                {% if result['image_url'] %}
-                <div class="card">
-                    <h3>Uploaded Image</h3>
-                    <img src="{{ result['image_url'] }}" alt="Uploaded image" />
-                </div>
-                {% endif %}
-
-                {% if result['landmark_image_url'] %}
-                <div class="card">
-                    <h3>Landmark Visualization</h3>
-                    <img src="{{ result['landmark_image_url'] }}" alt="Landmark visualization" />
-                </div>
-                {% endif %}
-            </div>
-
-            {% if result['landmark_json'] %}
-            <h3>Landmark JSON Preview</h3>
-            <pre>{{ result['landmark_json'] }}</pre>
-            {% endif %}
         </div>
-        {% endif %}
-    </div>
-</body>
 
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="main-grid">
+
+        <!-- LEFT PANEL -->
+        <aside class="panel">
+
+            <div class="panel-title">
+                INPUT
+            </div>
+
+            <form
+                action="/upload"
+                method="post"
+                enctype="multipart/form-data"
+            >
+
+                <label>
+                    Upload Face Image
+                </label>
+
+                {% if face_id %}
+                <input type="hidden" name="face_id" value="{{ face_id }}">
+                <div style="font-size: 13px; color: #4CAF50; margin-bottom: 10px;">
+                    ✓ Current image active. Upload below to change.
+                </div>
+                <input
+                    type="file"
+                    id="fileInput"
+                    name="file"
+                    accept=".jpg,.jpeg,.png"
+                >
+                {% else %}
+                <input
+                    type="file"
+                    id="fileInput"
+                    name="file"
+                    accept=".jpg,.jpeg,.png"
+                    required
+                >
+                {% endif %}
+
+                <button type="submit" id="uploadBtn">
+                    Upload & Analyze
+                </button>
+
+            </form>
+
+            <!-- TRANSFORM PAGE -->
+            <div class="panel-title" style="margin-top:28px;">
+                TRANSFORM PAGE
+            </div>
+
+            <a
+                class="export-btn"
+                href="/transform{% if face_id %}?image_id={{ face_id }}{% endif %}"
+            >
+                Open Transform Studio
+            </a>
+
+            <!-- STATUS -->
+            <div class="panel-title" style="margin-top:28px;">
+                STATUS
+            </div>
+
+            <div class="metric-card">
+                <strong>Pipeline</strong>
+
+                <span>
+                    {% if success is not none %}
+                        {{ success }}
+                    {% else %}
+                        Waiting for upload
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="metric-card">
+                <strong>Landmarks</strong>
+
+                <span>
+                    {% if landmark_success is not none %}
+                        {{ landmark_success }}
+                    {% else %}
+                        Waiting...
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="metric-card">
+                <strong>Landmark Count</strong>
+
+                <span>
+                    {% if landmark_count %}
+                        {{ landmark_count }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </span>
+            </div>
+
+        </aside>
+
+        <!-- CENTER -->
+        <main class="panel">
+
+            <div class="panel-title">
+                PREPROCESSING PREVIEW
+            </div>
+
+            {% if images %}
+
+            <div class="preview-grid">
+
+                <div class="image-box">
+                    <h3>ORIGINAL IMAGE</h3>
+
+                    <img
+                        src="{{ images.original }}"
+                        alt="Original Image"
+                    >
+                </div>
+
+                <div class="image-box">
+                    <h3>FACE BOUNDING BOX</h3>
+
+                    <img
+                        src="{{ images.bbox }}"
+                        alt="Bounding Box"
+                    >
+                </div>
+
+                <div class="image-box">
+                    <h3>CROPPED FACE</h3>
+
+                    <img
+                        src="{{ images.cropped }}"
+                        alt="Cropped Face"
+                    >
+                </div>
+
+                <div class="image-box">
+                    <h3>RESIZED FACE</h3>
+
+                    <img
+                        src="{{ images.resized }}"
+                        alt="Resized Face"
+                    >
+                </div>
+
+                <div class="image-box">
+                    <h3>GRAYSCALE FACE</h3>
+
+                    <img
+                        src="{{ images.grayscale }}"
+                        alt="Grayscale Face"
+                    >
+                </div>
+
+                <div class="image-box">
+                    <h3>LANDMARKS (FULL)</h3>
+
+                    <img
+                        src="{{ images.landmark_full }}"
+                        alt="Landmarks Full"
+                    >
+                </div>
+
+                <div class="image-box">
+                    <h3>LANDMARKS (GROUPED)</h3>
+
+                    <img
+                        src="{{ images.landmark_grouped }}"
+                        alt="Grouped Landmarks"
+                    >
+                </div>
+
+            </div>
+
+            {% else %}
+
+            <div class="placeholder-big">
+
+                <div class="placeholder-icon">
+                    ✨
+                </div>
+
+                <h2>
+                    Upload an image to begin
+                </h2>
+
+                <p>
+                    Face preprocessing, landmark detection and
+                    visualization results will appear here.
+                </p>
+
+            </div>
+
+            {% endif %}
+
+        </main>
+
+        <!-- RIGHT PANEL -->
+        <aside class="panel">
+
+            <div class="panel-title">
+                DETECTION INFO
+            </div>
+
+            <div class="metric-card">
+                <strong>Face Bounding Box</strong>
+
+                <span>
+                    {% if face_bbox %}
+                        {{ face_bbox }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="metric-card">
+                <strong>Metadata</strong>
+
+                <span>
+                    {% if metadata %}
+                        Image processed successfully
+                    {% else %}
+                        Waiting...
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if grouped_landmark_keys %}
+
+            <div class="analysis-card">
+
+    <h3>
+        Grouped Landmark Keys
+    </h3>
+
+    <div class="tag-container">
+
+        {% for key in grouped_landmark_keys %}
+
+            <span class="tag">
+                {{ key }}
+            </span>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+            {% endif %}
+
+            {% if landmark_json %}
+
+            <div class="analysis-card">
+
+                <h3>
+                    Landmark JSON Preview
+                </h3>
+
+                <pre>
+{{ landmark_json }}
+                </pre>
+
+            </div>
+
+            {% endif %}
+
+        </aside>
+
+    </div>
+
+</div>
+
+<!-- SCRIPT -->
+<script>
+
+const uploadBtn = document.getElementById("uploadBtn");
+
+const form = document.querySelector("form");
+
+if(form && uploadBtn){
+
+    form.addEventListener("submit", () => {
+
+        uploadBtn.innerHTML = "Processing...";
+        uploadBtn.disabled = true;
+
+    });
+
+}
+
+</script>
+
+</body>
 </html>

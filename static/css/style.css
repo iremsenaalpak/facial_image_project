@@ -57,6 +57,49 @@ select {
     margin: 8px 0 16px;
 }
 
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 11px 40px 11px 14px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.07);
+    background-image:
+        linear-gradient(45deg, transparent 50%, #ff77c7 50%),
+        linear-gradient(135deg, #ff77c7 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 50%,
+        calc(100% - 12px) 50%;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    border: 1px solid rgba(255, 120, 200, 0.35);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    box-sizing: border-box;
+}
+
+select:hover {
+    border-color: rgba(255, 79, 179, 0.7);
+    background-color: rgba(255, 79, 179, 0.1);
+}
+
+select:focus {
+    outline: none;
+    border-color: #ff4fb3;
+    box-shadow: 0 0 14px rgba(255, 79, 179, 0.4);
+}
+
+select option {
+    background-color: #1a142e;
+    color: white;
+    font-weight: 500;
+    padding: 10px;
+}
+
 button {
     width: 100%;
     padding: 13px;
@@ -236,14 +279,51 @@ button {
 .check-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 10px 0 6px;
+    gap: 12px;
+    margin: 12px 0 6px;
     color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
 }
 
-.check-row input {
-    width: auto;
+.check-row input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
     margin: 0;
+    border: 2px solid rgba(255, 79, 179, 0.6);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.check-row input[type="checkbox"]:hover {
+    border-color: #ff4fb3;
+    background: rgba(255, 79, 179, 0.12);
+}
+
+.check-row input[type="checkbox"]:checked {
+    background: #ff4fb3;
+    border-color: #ff4fb3;
+    box-shadow: 0 0 12px rgba(255, 79, 179, 0.55);
+}
+
+.check-row input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 11px;
+    border: solid white;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
 }
 
 input[type="color"] {

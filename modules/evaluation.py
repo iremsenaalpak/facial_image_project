@@ -68,7 +68,7 @@ def compute_ssim(original, processed):
     ssim_value = ssim(
         original_gray,
         processed_gray,
-        data_range=processed_gray.max() - processed_gray.min()
+        data_range=255
     )
 
     return float(ssim_value)

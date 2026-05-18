@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>FaceLab Studio</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
 </head>
 
 <body>
@@ -25,10 +25,23 @@
         <p>Facial Warping • Aging • Frequency Analysis</p>
     </div>
 </div>
+<a href="/" class="export-btn" style="text-align: center; margin-bottom: 20px; display: block; text-decoration: none;">Back to Main Page</a>
                 <div class="panel-title">INPUT</div>
 
                 <label>Upload Face Image</label>
 
+                {% if image_id %}
+                <input type="hidden" name="face_id" value="{{ image_id }}">
+                <div style="font-size: 13px; color: #4CAF50; margin-bottom: 10px;">
+                    ✓ Current image active. Upload below to change.
+                </div>
+                <input
+                    type="file"
+                    id="fileInput"
+                    name="file"
+                    accept=".jpg,.jpeg,.png"
+                >
+                {% else %}
                 <input
                     type="file"
                     id="fileInput"
@@ -36,6 +49,7 @@
                     accept=".jpg,.jpeg,.png"
                     required
                 >
+                {% endif %}
 
                 <div class="panel-title">TRANSFORMATION</div>
 
@@ -128,46 +142,52 @@
                 <div class="panel-title">CREATIVE FEATURES</div>
 
                 <label class="check-row">
-                    <input type="checkbox" name="creative" value="lip_color">
+                    <input type="checkbox" id="chk_lip_color" name="creative" value="lip_color" data-pair="lip_color_hex">
                     Lip Coloring
                 </label>
 
                 <input
                     type="color"
+                    id="lip_color_hex"
                     name="lip_color_hex"
                     value="#c0392b"
+                    data-checkbox="chk_lip_color"
                 >
 
                 <label class="check-row">
-                    <input type="checkbox" name="creative" value="hair_color">
+                    <input type="checkbox" id="chk_hair_color" name="creative" value="hair_color" data-pair="hair_color_hex">
                     Hair Coloring
                 </label>
 
                 <input
                     type="color"
+                    id="hair_color_hex"
                     name="hair_color_hex"
                     value="#4a2c0a"
+                    data-checkbox="chk_hair_color"
                 >
 
                 <label class="check-row">
-                    <input type="checkbox" name="creative" value="eye_color">
+                    <input type="checkbox" id="chk_eye_color" name="creative" value="eye_color" data-pair="eye_color_hex">
                     Eye Color
                 </label>
 
                 <input
                     type="color"
+                    id="eye_color_hex"
                     name="eye_color_hex"
                     value="#1e6db5"
+                    data-checkbox="chk_eye_color"
                 >
 
                 <label class="check-row">
-                    <input type="checkbox" name="creative" value="frame_photo">
+                    <input type="checkbox" id="chk_frame_photo" name="creative" value="frame_photo" data-pair="frame_style">
                     Photo Frame
                 </label>
 
                 <label>Frame Style</label>
 
-                <select name="frame_style">
+                <select name="frame_style" id="frame_style" data-checkbox="chk_frame_photo">
 
                     <option value="classic">Classic</option>
 
@@ -186,14 +206,6 @@
                 <select name="sticker_effect">
 
                     <option value="none">None</option>
-
-                    <option value="emoji_heart">
-                        Heart Emoji
-                    </option>
-
-                    <option value="emoji_star">
-                        Star Emoji
-                    </option>
 
                     <option value="crown">
                         Crown
@@ -237,6 +249,14 @@
                             <img
                                 id="originalPreview"
                                 src="{{ original_image }}"
+                                alt="Original Image"
+                            >
+
+                        {% elif image_id %}
+
+                            <img
+                                id="originalPreview"
+                                src="/uploads/{{ image_id }}_face.jpg"
                                 alt="Original Image"
                             >
 
@@ -408,7 +428,8 @@
                     </span>
 
                     <small>
-                        Shows high-frequency detail compared to low-frequency energy.
+                        Processed HF/LF ratio. Δ shows the shift vs the original
+                        (positive = more high-frequency detail, negative = smoother).
                     </small>
 
                 </div>
@@ -531,6 +552,18 @@ if (slider && sliderValue) {
 
     });
 }
+
+document.querySelectorAll('input[type="color"][data-checkbox], select[data-checkbox]')
+    .forEach(function(el) {
+        const checkboxId = el.getAttribute("data-checkbox");
+        const checkbox = document.getElementById(checkboxId);
+        if (!checkbox) return;
+
+        const eventName = el.tagName === "SELECT" ? "change" : "input";
+        el.addEventListener(eventName, function() {
+            checkbox.checked = true;
+        });
+    });
 
 const form = document.querySelector("form");
 

@@ -465,7 +465,7 @@ class FaceWarper:
         # Euclidean distance ensures correct scaling even when face is tilted
         eye_dist = np.linalg.norm(r_eye - l_eye)
 
-        is_native = style in ("round", "square", "aviator", "cateye")
+        is_native = False
 
         if is_native:
             # Generate at high resolution (1200px) for super-sampling anti-aliasing.
@@ -526,37 +526,15 @@ class FaceWarper:
         thickness = max(1, int(new_w * 0.008))
         frame_color = (15, 15, 15)
         
-        # Draw temples extending from the hinges exactly to the physical edge of the head.
-        # We calculate the distance by finding the outermost facial landmarks and adding a small margin for the ear.
-        l_cheek_x = float(landmarks[234][0])
-        r_cheek_x = float(landmarks[454][0])
-        l_ear_x = float(landmarks[127][0])
-        r_ear_x = float(landmarks[356][0])
-        
-        face_width_px = r_cheek_x - l_cheek_x
-        
-        # Estimate the physical edge of the head (slightly outside the outermost landmarks)
-        head_edge_l = min(l_cheek_x, l_ear_x) - (face_width_px * 0.05)
-        head_edge_r = max(r_cheek_x, r_ear_x) + (face_width_px * 0.05)
-        
-        # Calculate temple length required to reach exactly the edge of the head
-        dist_l = hx_l - head_edge_l
-        dist_r = head_edge_r - hx_r
-        
-        # If the hinge is already outside the head, don't draw the temple
-        cos_r = math.cos(rad) if abs(math.cos(rad)) > 0.1 else 1.0
-        temple_len_l = max(0, dist_l / cos_r)
-        temple_len_r = max(0, dist_r / cos_r)
-
-        tx_l = int(hx_l - temple_len_l * math.cos(rad))
-        ty_l = int(hy_l - temple_len_l * math.sin(rad))
-        
-        tx_r = int(hx_r + temple_len_r * math.cos(rad))
-        ty_r = int(hy_r + temple_len_r * math.sin(rad))
-
-        if temple_len_l > 0:
+        if ear_l is not None:
+            tx_l, ty_l = int(ear_l[0]), int(ear_l[1])
+            # Glasses sit slightly above the earlobe
+            ty_l = int(ty_l - (hx_r - hx_l) * 0.02)
             cv2.line(img_copy, (hx_l, hy_l), (tx_l, ty_l), frame_color, thickness, cv2.LINE_AA)
-        if temple_len_r > 0:
+            
+        if ear_r is not None:
+            tx_r, ty_r = int(ear_r[0]), int(ear_r[1])
+            ty_r = int(ty_r - (hx_r - hx_l) * 0.02)
             cv2.line(img_copy, (hx_r, hy_r), (tx_r, ty_r), frame_color, thickness, cv2.LINE_AA)
 
         # Alpha-composite glasses onto the face
@@ -770,13 +748,18 @@ class FaceWarper:
         return img, lens_dist
 
     def apply_hair_color(self, image, landmarks, color=(80, 40, 10), strength=0.6):
-        """Hair recolor using MediaPipe SelfieMulticlassSegmentation. The model
-        outputs a per-pixel hair probability that handles any hair type, length,
-        or color. We threshold softly and recolor in LAB to preserve strand detail."""
+        """Hair recolor using MediaPipe SelfieMulticlassSegmentation. The category
+        mask gives a binary 1/0 per pixel for the hair class. We dilate slightly
+        to catch wispy outliers, then feather the edges before LAB recolor."""
         mask = get_hair_segmenter().segment(image)
         if not np.any(mask > 0.5):
             return image.copy()
-        mask = cv2.GaussianBlur(mask, (0, 0), 1.5)
+        # Dilate to grab strand outliers the model may have just-barely missed
+        binary = (mask > 0.5).astype(np.uint8) * 255
+        binary = cv2.dilate(binary, np.ones((3, 3), np.uint8), iterations=1)
+        mask = binary.astype(np.float32) / 255.0
+        # Feather for natural edges
+        mask = cv2.GaussianBlur(mask, (0, 0), 2.0)
         return recolor_preserve_luminance(image, color, mask, strength=strength)
 
     def apply_eye_color(self, image, landmarks, color=(180, 100, 30), strength=0.85):
