@@ -199,7 +199,7 @@ def fft_high_pass_aging(image, intensity=0.5):
 
 
 def add_wrinkle_texture(image, intensity=0.5, seed=42):
-    intensity = np.clip(intensity, 0, 1)
+    intensity = np.clip(intensity, 0, 2)
 
     rng = np.random.default_rng(seed)
     img = image.astype(np.float32)
@@ -207,7 +207,7 @@ def add_wrinkle_texture(image, intensity=0.5, seed=42):
     noise = rng.normal(0, 1, img.shape).astype(np.float32)
     noise = cv2.GaussianBlur(noise, (7, 7), 0)
 
-    texture_strength = 2.0 + 5.0 * intensity
+    texture_strength = 8.0 + 15.0 * intensity
     textured = img + noise * texture_strength
 
     return clip_uint8(textured)
@@ -225,7 +225,7 @@ def add_wrinkle_lines(image, intensity=0.5, landmarks=None):
     overlay = np.zeros_like(image, dtype=np.uint8)
 
     # Very faint shadow — barely darker than mid-gray noise
-    shadow = int(12 + 14 * intensity)
+    shadow = int(18 + 20 * intensity)
     shadow_color = (shadow, shadow, shadow)
 
     needed = [
@@ -261,7 +261,7 @@ def add_wrinkle_lines(image, intensity=0.5, landmarks=None):
     forehead_center_x = (p_brow_l[0] + p_brow_r[0]) * 0.5
     half_span = float(np.linalg.norm(p_brow_r - p_brow_l)) * 0.48
 
-    n_lines = 3
+    n_lines = 5
     for i in range(n_lines):
         t = (i + 1) / (n_lines + 1)
         y = int(forehead_top_y + forehead_height * (0.35 + 0.45 * t))
@@ -296,7 +296,7 @@ def add_wrinkle_lines(image, intensity=0.5, landmarks=None):
         (p_eye_ro, np.array([1.0, 0.0]))
     ):
         for dy_frac in (-0.35, 0.35):
-            length = face_width * 0.045
+            length = face_width * 0.11
             end = eye_outer + direction * length
             end[1] += dy_frac * face_width * 0.022
             cv2.line(
@@ -310,40 +310,122 @@ def add_wrinkle_lines(image, intensity=0.5, landmarks=None):
     # Under-eye soft arc — single thin line
     for eye_lower in (p_eye_ll, p_eye_rl):
         cx = int(eye_lower[0])
-        cy = int(eye_lower[1] + face_width * 0.022)
+        cy = int(eye_lower[1] + face_width * 0.035)
+
         cv2.ellipse(
             overlay,
             (cx, cy),
-            (int(face_width * 0.06), int(face_width * 0.014)),
+            (int(face_width * 0.090), int(face_width * 0.028)),
             0, 0, 180,
             shadow_color,
-            1
+            2
+        )
+
+     # Nasolabial folds — nose side to mouth corner
+    nose_l = np.array(landmarks[NOSE_WING_LEFT], dtype=np.float32)
+    nose_r = np.array(landmarks[NOSE_WING_RIGHT], dtype=np.float32)
+    mouth_l = np.array(landmarks[MOUTH_CORNER_LEFT], dtype=np.float32)
+    mouth_r = np.array(landmarks[MOUTH_CORNER_RIGHT], dtype=np.float32)
+
+    for nose, mouth in [(nose_l, mouth_l), (nose_r, mouth_r)]:
+        p1 = nose + np.array([0, face_width * 0.02])
+        p2 = mouth + np.array([0, -face_width * 0.02])
+
+        mid = (p1 + p2) / 2
+        mid[0] = mid[0] * 0.85 + mouth[0] * 0.15
+
+        curve = np.array([p1, mid, p2], dtype=np.int32)
+
+        cv2.polylines(
+            overlay,
+            [curve],
+            False,
+            shadow_color,
+            3,
+            cv2.LINE_AA
+        )
+        # Strong extra forehead lines
+    for i in range(4):
+        y = int(forehead_top_y + forehead_height * (0.42 + i * 0.10))
+        x1 = int(forehead_center_x - half_span * 0.85)
+        x2 = int(forehead_center_x + half_span * 0.85)
+
+        cv2.line(
+            overlay,
+            (x1, y),
+            (x2, y + int(np.sin(i) * 2)),
+            shadow_color,
+            2,
+            cv2.LINE_AA
+        )
+
+    # Marionette lines: mouth corners downward
+    for mouth in [mouth_l, mouth_r]:
+        p1 = mouth + np.array([0, face_width * 0.015])
+        p2 = mouth + np.array([0, face_width * 0.12])
+
+        cv2.line(
+            overlay,
+            tuple(p1.astype(int)),
+            tuple(p2.astype(int)),
+            shadow_color,
+            1,
+            cv2.LINE_AA
         )
 
     # Heavy blur so lines read as soft shadow gradients, not painted marks
-    overlay = cv2.GaussianBlur(overlay, (9, 9), 0)
+    overlay = cv2.GaussianBlur(overlay, (13, 13), 0)
 
-    alpha = 0.25 + 0.20 * intensity
+    alpha = 0.32 + 0.18 * intensity
     result = cv2.addWeighted(image, 1.0, overlay, alpha, 0)
     return clip_uint8(result)
 
-
-def adjust_aging_tone(image, intensity=0.5):
-    """
-    Warm, slightly sallow aged-skin tone. Avoids the cool/pale shift that
-    reads as 'sickly' or 'lifeless'. Older skin tends toward yellow-warm,
-    not blue-cool.
-    """
+def add_gray_hair(image, intensity=0.5):
     intensity = np.clip(intensity, 0, 1)
 
-    # Gentle contrast, almost no darkening
+    img = image.astype(np.float32)
+
+    try:
+        from modules.hair_segmenter import get_hair_segmenter
+        segmenter = get_hair_segmenter()
+
+        # Senin hair_segmenter.py dosyanda doğru fonksiyon bu:
+        hair_mask = segmenter.segment(image).astype(np.float32)
+
+    except Exception as e:
+        print("Hair segmentation failed:", e)
+
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype(np.float32)
+        s = hsv[:, :, 1]
+        v = hsv[:, :, 2]
+
+        hair_mask = ((v < 180) & (s > 20)).astype(np.float32)
+
+    hair_mask = cv2.GaussianBlur(hair_mask, (51, 51), 0)
+    hair_mask = np.clip(hair_mask, 0, 1)
+    hair_mask = hair_mask[:, :, np.newaxis]
+
+    gray_hair = img.copy()
+
+    gray_hair[:, :, 0] = 190
+    gray_hair[:, :, 1] = 190
+    gray_hair[:, :, 2] = 190
+
+    alpha = 0.85 * intensity
+
+    result = img * (1 - hair_mask * alpha) + gray_hair * (hair_mask * alpha)
+
+    return clip_uint8(result)
+
+def adjust_aging_tone(image, intensity=0.5):
+    intensity = np.clip(intensity, 0, 1)
+
     alpha = 0.98 + 0.04 * intensity
     beta = -4 * intensity
 
     toned = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
 
     hsv = cv2.cvtColor(toned, cv2.COLOR_BGR2HSV).astype(np.float32)
-    # Mild desaturation only — too much desat is what made it look dead
     hsv[:, :, 1] *= 1.0 - 0.10 * intensity
 
     toned = cv2.cvtColor(
@@ -353,10 +435,9 @@ def adjust_aging_tone(image, intensity=0.5):
 
     toned = toned.astype(np.float32)
 
-    # Warm yellow-tan shift: lift green slightly, drop blue, keep red
-    toned[:, :, 0] *= 1.0 - 0.04 * intensity  # less blue
-    toned[:, :, 1] *= 1.0 + 0.02 * intensity  # slightly more green
-    toned[:, :, 2] *= 1.0 + 0.01 * intensity  # keep red warm
+    toned[:, :, 0] *= 1.0 - 0.04 * intensity
+    toned[:, :, 1] *= 1.0 + 0.02 * intensity
+    toned[:, :, 2] *= 1.0 + 0.01 * intensity
 
     return clip_uint8(toned)
 
@@ -382,6 +463,8 @@ def apply_aging(image, intensity=0.5, use_fft=False, use_skin_mask=True,
     aged = add_wrinkle_texture(aged, soft_intensity)
     aged = add_wrinkle_lines(aged, intensity, landmarks=landmarks)
     aged = adjust_aging_tone(aged, soft_intensity)
+    aged = add_aging_sagging(aged, intensity, landmarks=landmarks)
+    aged = add_gray_hair(aged, intensity)
 
     if use_skin_mask:
         mask = create_face_mask(original, landmarks=landmarks)
@@ -645,6 +728,81 @@ def apply_deaging(image, intensity=0.5, use_fft=False, use_skin_mask=True,
 
     return deaged
 
+def add_aging_sagging(image, intensity=0.5, landmarks=None):
+    if landmarks is None or len(landmarks) < 468:
+        return image.copy()
+
+    intensity = np.clip(intensity, 0, 1)
+
+    h, w = image.shape[:2]
+    pts = np.array(landmarks, dtype=np.float64)
+
+    xs, ys = pts[:, 0], pts[:, 1]
+    fw = float(xs.max() - xs.min())
+    fh = float(ys.max() - ys.min())
+
+    Y, X = np.mgrid[0:h, 0:w].astype(np.float32)
+    map_x = X.copy()
+    map_y = Y.copy()
+
+    def gauss(cx, cy, sx, sy):
+        return np.exp(
+            -(((X - cx) ** 2) / (2 * sx ** 2) +
+              ((Y - cy) ** 2) / (2 * sy ** 2))
+        )
+
+    # Eye outer/lower points
+    left_eye = pts[145]
+    right_eye = pts[374]
+
+    # Mouth corners
+    left_mouth = pts[61]
+    right_mouth = pts[291]
+
+    # Cheek/jaw areas
+    left_cheek = pts[234]
+    right_cheek = pts[454]
+
+    # 1) Under-eye / eyelid droop
+    for p in [left_eye, right_eye]:
+        g = gauss(
+            p[0],
+            p[1],
+            fw * 0.09,
+            fh * 0.045
+        )
+        map_y -= g * intensity * 0.030 * fh
+
+    # 2) Mouth corners slightly downward
+    for p in [left_mouth, right_mouth]:
+        g = gauss(
+            p[0],
+            p[1],
+            fw * 0.08,
+            fh * 0.055
+        )
+        map_y -= g * intensity * 0.035 * fh
+
+    # 3) Cheek sagging downward
+    for p in [left_cheek, right_cheek]:
+        g = gauss(
+            p[0],
+            p[1],
+            fw * 0.13,
+            fh * 0.10
+        )
+        map_y -= g * intensity * 0.025 * fh
+
+    warped = cv2.remap(
+        image,
+        map_x.astype(np.float32),
+        map_y.astype(np.float32),
+        cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_REFLECT_101
+    )
+
+    mask = create_face_mask(image, landmarks=landmarks)
+    return blend_with_mask(image, warped, mask)
 
 # =========================================================
 # MAIN PIPELINE

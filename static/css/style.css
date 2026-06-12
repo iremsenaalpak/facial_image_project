@@ -1,450 +1,240 @@
+* { box-sizing: border-box; }
+
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #080817, #251033, #c02b7c);
-    color: white;
-    min-height: 100vh;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    background-color: #F7F4EF; /* Şık açık bej arka plan */
+    color: #4A3F3A;
 }
 
 .dashboard {
-    padding: 28px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
-.header {
+/* Üst Başlık Alanı */
+.studio-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 28px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #EAE2D5;
+    margin-bottom: 25px;
 }
 
-.logo h1 {
+.studio-header h1 {
     margin: 0;
-    font-size: 34px;
+    font-size: 26px;
+    font-weight: 700;
 }
 
-.logo span {
-    color: #ff4fb3;
+.studio-header h1 span {
+    color: #D38E8A;
 }
 
-.logo p {
-    margin: 6px 0 0;
-    color: #d8c6df;
-}
-
-.main-grid {
+/* Masaüstü Web Grid Düzeni */
+.main-studio-grid {
     display: grid;
-    grid-template-columns: 280px 1fr 280px;
-    gap: 20px;
+    grid-template-columns: 1fr 460px; /* Sol geniş görsel alanı, sağ efekt sihirbazı */
+    gap: 30px;
 }
 
+@media (max-width: 1024px) { 
+    .main-studio-grid { grid-template-columns: 1fr; } 
+}
+
+/* Paneller */
 .panel {
-    background: rgba(20, 18, 38, 0.82);
-    border: 1px solid rgba(255, 120, 200, 0.25);
-    border-radius: 18px;
-    padding: 20px;
-    box-shadow: 0 0 30px rgba(255, 70, 170, 0.15);
+    background: #FFFFFF;
+    border-radius: 25px;
+    padding: 25px;
+    border: 1px solid #EAE2D5;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
 }
 
-.panel-title {
-    color: #ff77c7;
-    font-weight: bold;
-    margin-bottom: 16px;
+/* Çember Butonların Listelendiği Alan */
+.filter-carousel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 20px 0;
+    min-height: 105px;
+    align-items: flex-start;
 }
 
-input,
-select {
-    width: 100%;
-    margin: 8px 0 16px;
-}
-
-select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    padding: 11px 40px 11px 14px;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    color: white;
-    background-color: rgba(255, 255, 255, 0.07);
-    background-image:
-        linear-gradient(45deg, transparent 50%, #ff77c7 50%),
-        linear-gradient(135deg, #ff77c7 50%, transparent 50%);
-    background-position:
-        calc(100% - 18px) 50%,
-        calc(100% - 12px) 50%;
-    background-size: 6px 6px, 6px 6px;
-    background-repeat: no-repeat;
-    border: 1px solid rgba(255, 120, 200, 0.35);
-    border-radius: 12px;
+.filter-circle-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     cursor: pointer;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    box-sizing: border-box;
+    width: 80px;
+    user-select: none;
 }
 
-select:hover {
-    border-color: rgba(255, 79, 179, 0.7);
-    background-color: rgba(255, 79, 179, 0.1);
+.filter-circle-card input[type="radio"],
+.filter-circle-card input[type="checkbox"] { 
+    display: none; 
 }
 
-select:focus {
-    outline: none;
-    border-color: #ff4fb3;
-    box-shadow: 0 0 14px rgba(255, 79, 179, 0.4);
+/* Gönderdiğin Filtre Uygulamalarındaki Yuvarlak İkon Yapısı */
+.circle-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50% !important;
+    border: 2px solid #EAE2D5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    background: #FAF8F5;
+    transition: all 0.25s ease;
+    overflow: hidden;
+    color: #8A7E78;
+    font-size: 20px;
 }
 
-select option {
-    background-color: #1a142e;
+.filter-circle-card:hover .circle-avatar {
+    border-color: #D38E8A;
+    transform: scale(1.04);
+}
+
+/* Seçili Çemberin Şık Vurgusu */
+.filter-circle-card input:checked + .circle-avatar {
+    border-color: #D38E8A;
+    background: #FFF5F4;
+    box-shadow: 0 0 12px rgba(211, 142, 138, 0.4);
+    color: #D38E8A;
+}
+
+.filter-title { 
+    font-size: 11px; 
+    color: #8A7E78; 
+    font-weight: 500; 
+    text-align: center;
+    margin-top: 2px;
+}
+
+.filter-circle-card input:checked ~ .filter-title {
+    color: #D38E8A;
+    font-weight: 600;
+}
+
+/* Özel Renk Seçici Çember Tasarımı (+) */
+.color-picker-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 2px dashed #D38E8A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #FAF8F5;
+    cursor: pointer;
+    font-size: 22px;
+    color: #D38E8A;
+    transition: background 0.2s;
+}
+
+.color-picker-circle:hover {
+    background: #FFF5F4;
+}
+
+/* Alt Kategoriler Sekme Menüsü (Ruj, Yüz, Saç vb.) */
+.studio-tabs {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    border-top: 1px solid #EAE2D5;
+    padding-top: 20px;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 8px;
+    border-radius: 14px;
+    border: 1px solid #EAE2D5;
+    background: #FAF8F5;
+    cursor: pointer;
+    font-weight: 600;
+    color: #8A7E78;
+    font-size: 12px;
+    text-align: center;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: #3D3431;
     color: white;
-    font-weight: 500;
-    padding: 10px;
+    border-color: #3D3431;
 }
 
-button {
+/* Ana Aksiyon Butonları */
+.apply-btn {
     width: 100%;
-    padding: 13px;
+    padding: 14px;
+    background: #3D3431;
+    color: white;
     border: none;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #ff4fb3, #b744ff);
-    color: white;
-    font-weight: bold;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
+    margin-bottom: 20px;
+    transition: background 0.2s;
 }
 
-.preview-grid {
+.apply-btn:hover {
+    background: #544743;
+}
+
+.intensity-box {
+    background: #FAF8F5;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid #EAE2D5;
+}
+
+/* Resim Alanları */
+.studio-preview-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    align-items: start;
+    gap: 15px;
 }
 
 .image-box {
-    background: rgba(255,255,255,0.06);
+    background: #FAF8F5;
+    border: 1px solid #EAE2D5;
     border-radius: 16px;
-    padding: 14px;
-    min-height: 280px;
+    padding: 10px;
 }
 
-.image-box h3 {
-    font-size: 14px;
-    color: #f2d4ea;
+.image-box small {
+    display: block;
+    font-weight: 600;
+    color: #8A7E78;
+    margin-bottom: 6px;
+    font-size: 11px;
 }
 
 .placeholder {
-    height: 230px;
-    border: 1px dashed rgba(255,255,255,0.25);
+    height: 300px;
+    border: 1px dashed #CDCECA;
     border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #bfaac9;
+    color: #A19995;
+    background: #FAF8F5;
 }
 
-.image-box img {
-    width: 100%;
-    height: 520px;
-    object-fit: contain;
-    border-radius: 14px;
-    background: rgba(0, 0, 0, 0.25);
-}
-
-.metric-card {
-    background: rgba(255,255,255,0.07);
-    border-radius: 14px;
-    padding: 15px;
-    margin-bottom: 14px;
-}
-
-.metric-card strong {
-    display: block;
-    color: white;
-    font-size: 18px;
-}
-
-.metric-card span {
-    color: #c8b6d8;
-    font-size: 13px;
-    word-break: break-word;
-}
-
-.metric-card small {
-    display: block;
-    margin-top: 6px;
-    color: #cdb7d9;
-    font-size: 12px;
-    line-height: 1.35;
-}
-
-.export-btn {
-    display: block;
-    text-align: center;
-    margin-top: 10px;
-    padding: 12px;
-    border-radius: 12px;
-    text-decoration: none;
-    background: linear-gradient(90deg, #ff4fb3, #b744ff);
-    color: white;
-    font-weight: bold;
-}
-
-.analysis-card {
-    margin-top: 24px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255, 120, 200, 0.18);
-    border-radius: 16px;
-    padding: 18px;
-    color: white;
-    max-width: 100%;
-    overflow: hidden;
-}
-
-.analysis-card h3 {
-    margin-top: 0;
-    color: #ff77c7;
-}
-
-.analysis-card table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-    color: white;
-    font-size: 14px;
-}
-
-.analysis-card th,
-.analysis-card td {
-    border: 1px solid rgba(255,255,255,0.18);
-    padding: 10px;
-    text-align: left;
-}
-
-.analysis-card th {
-    background: rgba(255, 79, 179, 0.22);
-    color: white;
-}
-
-.analysis-card pre {
-    max-height: 220px;
-    overflow: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-size: 12px;
-    line-height: 1.4;
-    background: rgba(0,0,0,0.18);
-    padding: 14px;
-    border-radius: 12px;
-    color: white;
-}
-
-.glasses-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin: 10px 0 18px;
-}
-
-.glasses-card {
-    position: relative;
-    padding: 12px 8px;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.18);
-    text-align: center;
-    cursor: pointer;
-    transition: 0.2s ease;
-}
-
-.glasses-card input {
-    display: none;
-}
-
-.glasses-card span {
-    display: block;
-    font-size: 22px;
-    color: white;
-    margin-bottom: 6px;
-}
-
-.glasses-card small {
-    color: #d8c6df;
-    font-size: 12px;
-}
-
-.glasses-card:has(input:checked) {
-    border-color: #ff4fb3;
-    box-shadow: 0 0 18px rgba(255, 79, 179, 0.45);
-    background: rgba(255, 79, 179, 0.18);
-}
-
-.check-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 12px 0 6px;
-    color: white;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    user-select: none;
-}
-
-.check-row input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 22px;
-    height: 22px;
-    margin: 0;
-    border: 2px solid rgba(255, 79, 179, 0.6);
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.05);
-    cursor: pointer;
-    position: relative;
-    transition: all 0.15s ease;
-    flex-shrink: 0;
-}
-
-.check-row input[type="checkbox"]:hover {
-    border-color: #ff4fb3;
-    background: rgba(255, 79, 179, 0.12);
-}
-
-.check-row input[type="checkbox"]:checked {
-    background: #ff4fb3;
-    border-color: #ff4fb3;
-    box-shadow: 0 0 12px rgba(255, 79, 179, 0.55);
-}
-
-.check-row input[type="checkbox"]:checked::after {
-    content: "";
-    position: absolute;
-    left: 6px;
-    top: 2px;
-    width: 5px;
-    height: 11px;
-    border: solid white;
-    border-width: 0 2.5px 2.5px 0;
-    transform: rotate(45deg);
-}
-
-input[type="color"] {
-    width: 100%;
-    height: 38px;
-    border: none;
-    border-radius: 10px;
-    padding: 4px;
-    background: rgba(255,255,255,0.12);
-    margin-bottom: 12px;
-}
-
-.slider-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-#sliderValue {
-    min-width: 36px;
-    color: white;
-    font-weight: bold;
-}
-
-button:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-}
-
-.tag-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.tag {
-    padding: 7px 12px;
-    border-radius: 999px;
-    background: rgba(255, 79, 179, 0.18);
-    border: 1px solid rgba(255, 79, 179, 0.4);
-    color: white;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.sidebar-logo {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 26px;
-}
-
-.logo-icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 79, 179, 0.55);
-    display: grid;
-    place-items: center;
-    color: #ff4fb3;
-    font-size: 28px;
-    box-shadow: 0 0 18px rgba(255, 79, 179, 0.25);
-}
-
-.logo-text h1 {
-    margin: 0;
-    font-size: 32px;
-    line-height: 1;
-    font-weight: 800;
-}
-
-.logo-text h1 span {
-    color: #ff4fb3;
-}
-
-.logo-text p {
-    margin: 6px 0 0;
-    color: #d8c6df;
-    font-size: 12px;
-    line-height: 1.25;
-}
-
-.horizontal-logo {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 28px;
-}
-
-.horizontal-logo .logo-icon {
-    width: 54px;
-    height: 54px;
-    flex: 0 0 54px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 79, 179, 0.55);
-    display: grid;
-    place-items: center;
-    color: #ff4fb3;
-    font-size: 28px;
-    box-shadow: 0 0 18px rgba(255, 79, 179, 0.25);
-}
-
-.horizontal-logo .logo-text h1 {
-    margin: 0;
-    font-size: 28px;
-    line-height: 0.95;
-    font-weight: 800;
-}
-
-.horizontal-logo .logo-text h1 span {
-    color: #ff4fb3;
-}
-
-.horizontal-logo .logo-text p {
-    margin: 7px 0 0;
-    color: #d8c6df;
-    font-size: 11px;
-    line-height: 1.25;
-}
-
-.face-icon {
-    font-family: Arial, sans-serif;
+/* Laboratuvar Detay Rapor Alanı */
+.analysis-section {
+    background: #FFFFFF;
+    border-radius: 20px;
+    padding: 20px;
+    margin-top: 25px;
+    border: 1px solid #EAE2D5;
 }
