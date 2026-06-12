@@ -72,6 +72,8 @@ class FaceWarper:
             return self._lip_widen_remap(image, landmarks, intensity)
         if mode == "eyebrow_raise":
             return self._eyebrow_raise_remap(image, landmarks, intensity)
+        if mode == "nose_enhance":
+            return self._nose_enhance_remap(image, landmarks, intensity)
 
         return image.copy()
 
@@ -394,6 +396,81 @@ class FaceWarper:
         result = (warped.astype(np.float32) * comp_mask_3 +
                   image.astype(np.float32) * (1.0 - comp_mask_3))
         return result.clip(0, 255).astype(np.uint8)
+    
+    def _nose_enhance_remap(self, image, landmarks, intensity):
+        h, w = image.shape[:2]
+        pts = np.array(landmarks, dtype=np.float64)
+
+        xs, ys = pts[:, 0], pts[:, 1]
+        fw = float(xs.max() - xs.min())
+        fh = float(ys.max() - ys.min())
+
+        nose_tip = pts[4]
+        nose_center = pts[94]
+        nose_left = pts[129]
+        nose_right = pts[358]
+
+        Y, X = np.mgrid[0:h, 0:w].astype(np.float32)
+
+        map_x = X.copy()
+        map_y = Y.copy()
+
+        comp_mask = np.zeros((h, w), dtype=np.float32)
+
+        for wing in [nose_left, nose_right]:
+
+            wx = float(wing[0])
+            wy = float(wing[1])
+
+            sigma = float(fw * 0.055)
+
+            g = np.exp(
+                -((X - wx) ** 2 + (Y - wy) ** 2)
+                / (2.0 * sigma ** 2)
+            )
+
+            pull = float(intensity * 0.045 * fw)
+
+            if wx < nose_center[0]:
+                map_x -= g * pull
+            else:
+                map_x += g * pull
+
+            comp_mask = np.maximum(comp_mask, g)
+
+        tx = float(nose_tip[0])
+        ty = float(nose_tip[1])
+
+        sigma_tip = float(fw * 0.12)
+
+        g_tip = np.exp(
+            -((X - tx) ** 2 + (Y - ty) ** 2)
+            / (2.0 * sigma_tip ** 2)
+        )
+
+        map_y += g_tip * float(intensity * 0.015 * fh)
+
+        comp_mask = np.maximum(comp_mask, g_tip)
+
+        comp_mask = cv2.GaussianBlur(comp_mask, (41, 41), 14)
+        comp_mask = np.clip(comp_mask, 0.0, 1.0)
+
+        warped = cv2.remap(
+            image,
+            map_x.astype(np.float32),
+            map_y.astype(np.float32),
+            cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REFLECT_101
+        )
+
+        comp_mask = comp_mask[:, :, np.newaxis]
+
+        result = (
+            warped.astype(np.float32) * comp_mask +
+            image.astype(np.float32) * (1.0 - comp_mask)
+        )
+
+        return result.clip(0, 255).astype(np.uint8)   
 
     def apply_lip_color(self, image, landmarks, color=(0, 0, 200), alpha=0.55):
         """

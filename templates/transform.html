@@ -2,522 +2,673 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>FaceLab Studio</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeautyDSP Virtual Studio</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=165">
+    <style>
+        .circle-avatar {
+            border-radius: 50% !important;
+            width: 75px;
+            height: 75px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #EAE2D5;
+            transition: all 0.25s ease;
+            font-size: 24px;
+            background: #FAF8F5;
+            color: #8A7E78;
+        }
+        .filter-carousel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+            min-height: 110px;
+        }
+        .filter-circle-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            width: 80px;
+        }
+        .filter-circle-card input[type="radio"],
+        .filter-circle-card input[type="checkbox"] {
+            display: none;
+        }
+        .filter-circle-card input:checked + .circle-avatar {
+            border-color: #D38E8A;
+            background-color: #FFF5F4;
+            box-shadow: 0 0 12px rgba(211, 142, 138, 0.4);
+            color: #D38E8A;
+        }
+        .custom-plus-btn {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: 2px dashed #D38E8A;
+            background: #FAF8F5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: #D38E8A;
+            cursor: pointer;
+        }
+    </style>
 </head>
 
 <body>
-
 <div class="dashboard">
 
-    <form action="/transform" method="post" enctype="multipart/form-data">
-
-        <div class="main-grid">
-
-            <!-- LEFT PANEL -->
-            <aside class="panel">
-
-                <div class="sidebar-logo horizontal-logo">
-    <div class="logo-icon face-icon">☺</div>
-
-    <div class="logo-text">
-        <h1>Open Transform <span>Studio</span></h1>
-        <p>Facial Warping • Aging • Frequency Analysis</p>
-    </div>
-</div>
-<a href="/" class="export-btn" style="text-align: center; margin-bottom: 20px; display: block; text-decoration: none;">Back to Main Page</a>
-                <div class="panel-title">INPUT</div>
-
-                <label>Upload Face Image</label>
-
-                {% if image_id %}
-                <input type="hidden" name="face_id" value="{{ image_id }}">
-                <div style="font-size: 13px; color: #4CAF50; margin-bottom: 10px;">
-                    ✓ Current image active. Upload below to change.
-                </div>
-                <input
-                    type="file"
-                    id="fileInput"
-                    name="file"
-                    accept=".jpg,.jpeg,.png"
-                >
-                {% else %}
-                <input
-                    type="file"
-                    id="fileInput"
-                    name="file"
-                    accept=".jpg,.jpeg,.png"
-                    required
-                >
-                {% endif %}
-
-                <div class="panel-title">TRANSFORMATION</div>
-
-                <label>Expression Mode</label>
-
-                <select name="mode">
-
-                    <option value="none">None</option>
-
-                    <option value="smile">
-                        Smile Enhancement
-                    </option>
-
-                    <option value="eyebrow_raise">
-                        Eyebrow Raise
-                    </option>
-
-                    <option value="lip_widen">
-                        Lip Widening
-                    </option>
-
-                    <option value="face_slim">
-                        Face Slimming
-                    </option>
-
-                    <option value="aging">
-                        Aging
-                    </option>
-
-                    <option value="deaging">
-                        De-aging
-                    </option>
-
-                </select>
-
-                <label>Intensity</label>
-
-                <div class="slider-row">
-
-                    <input
-                        type="range"
-                        id="intensitySlider"
-                        name="intensity"
-                        min="0.1"
-                        max="2.0"
-                        step="0.1"
-                        value="1.0"
-                    >
-
-                    <span id="sliderValue">1.0</span>
-
-                </div>
-
-                <div class="panel-title">GLASSES STYLE</div>
-
-                <div class="glasses-grid">
-
-                    <label class="glasses-card">
-                        <input type="radio" name="glasses_style" value="none" checked>
-                        <span>✕</span>
-                        <small>None</small>
-                    </label>
-
-                    <label class="glasses-card">
-                        <input type="radio" name="glasses_style" value="round">
-                        <span>○—○</span>
-                        <small>Round</small>
-                    </label>
-
-                    <label class="glasses-card">
-                        <input type="radio" name="glasses_style" value="square">
-                        <span>▭—▭</span>
-                        <small>Square</small>
-                    </label>
-
-                    <label class="glasses-card">
-                        <input type="radio" name="glasses_style" value="aviator">
-                        <span>◒—◒</span>
-                        <small>Aviator</small>
-                    </label>
-
-                    <label class="glasses-card">
-                        <input type="radio" name="glasses_style" value="cateye">
-                        <span>◢—◣</span>
-                        <small>Cat-eye</small>
-                    </label>
-
-                </div>
-
-                <div class="panel-title">CREATIVE FEATURES</div>
-
-                <label class="check-row">
-                    <input type="checkbox" id="chk_lip_color" name="creative" value="lip_color" data-pair="lip_color_hex">
-                    Lip Coloring
-                </label>
-
-                <input
-                    type="color"
-                    id="lip_color_hex"
-                    name="lip_color_hex"
-                    value="#c0392b"
-                    data-checkbox="chk_lip_color"
-                >
-
-                <label class="check-row">
-                    <input type="checkbox" id="chk_hair_color" name="creative" value="hair_color" data-pair="hair_color_hex">
-                    Hair Coloring
-                </label>
-
-                <input
-                    type="color"
-                    id="hair_color_hex"
-                    name="hair_color_hex"
-                    value="#4a2c0a"
-                    data-checkbox="chk_hair_color"
-                >
-
-                <label class="check-row">
-                    <input type="checkbox" id="chk_eye_color" name="creative" value="eye_color" data-pair="eye_color_hex">
-                    Eye Color
-                </label>
-
-                <input
-                    type="color"
-                    id="eye_color_hex"
-                    name="eye_color_hex"
-                    value="#1e6db5"
-                    data-checkbox="chk_eye_color"
-                >
-
-                <label class="check-row">
-                    <input type="checkbox" id="chk_frame_photo" name="creative" value="frame_photo" data-pair="frame_style">
-                    Photo Frame
-                </label>
-
-                <label>Frame Style</label>
-
-                <select name="frame_style" id="frame_style" data-checkbox="chk_frame_photo">
-
-                    <option value="classic">Classic</option>
-
-                    <option value="modern">Modern</option>
-
-                    <option value="polaroid">Polaroid</option>
-
-                    <option value="vintage">Vintage</option>
-
-                </select>
-
-                <div class="panel-title">STICKER EFFECTS</div>
-
-                <label>Sticker Effect</label>
-
-                <select name="sticker_effect">
-
-                    <option value="none">None</option>
-
-                    <option value="crown">
-                        Crown
-                    </option>
-
-                    <option value="cat_ears">
-                        Cat Ears
-                    </option>
-
-                    <option value="sparkles">
-                        Sparkles
-                    </option>
-
-                    <option value="freckles">
-                        Freckles
-                    </option>
-
-                </select>
-
-                <button type="submit" id="transformBtn">
-                    Run Transformation
-                </button>
-
-            </aside>
-
-            <!-- CENTER -->
-            <main class="panel">
-
-                <div class="panel-title">
-                    TRANSFORMATION PREVIEW
-                </div>
-
-                <div class="preview-grid">
-
-                    <div class="image-box">
-
-                        <h3>ORIGINAL IMAGE</h3>
-
-                        {% if original_image %}
-
-                            <img
-                                id="originalPreview"
-                                src="{{ original_image }}"
-                                alt="Original Image"
-                            >
-
-                        {% elif image_id %}
-
-                            <img
-                                id="originalPreview"
-                                src="/uploads/{{ image_id }}_face.jpg"
-                                alt="Original Image"
-                            >
-
-                        {% else %}
-
-                            <img
-                                id="originalPreview"
-                                src=""
-                                alt="Original Preview"
-                                style="display:none;"
-                            >
-
-                            <div
-                                id="originalPlaceholder"
-                                class="placeholder"
-                            >
-                                Original image will appear here
-                            </div>
-
-                        {% endif %}
-
-                    </div>
-
-                    <div class="image-box">
-
-                        <h3>TRANSFORMED IMAGE</h3>
-
-                        {% if transformed_image %}
-
-                            <img
-                                src="{{ transformed_image }}"
-                                alt="Transformed Image"
-                            >
-
-                        {% else %}
-
-                            <div class="placeholder">
-                                Transformed image will appear here
-                            </div>
-
-                        {% endif %}
-
-                    </div>
-
-                </div>
-
-                {% if orig_spectrum and proc_spectrum %}
-
-                <div
-                    class="panel-title"
-                    style="margin-top:24px;"
-                >
-                    FREQUENCY DOMAIN ANALYSIS
-                </div>
-
-                <div class="preview-grid">
-
-                    <div class="image-box">
-
-                        <h3>ORIGINAL SPECTRUM</h3>
-
-                        <img
-                            src="{{ orig_spectrum }}"
-                            alt="Original Spectrum"
-                        >
-
-                    </div>
-
-                    <div class="image-box">
-
-                        <h3>TRANSFORMED SPECTRUM</h3>
-
-                        <img
-                            src="{{ proc_spectrum }}"
-                            alt="Transformed Spectrum"
-                        >
-
-                    </div>
-
-                </div>
-
-                {% endif %}
-
-                {% if frequency_table %}
-
-                <div class="analysis-card">
-
-                    <h3>
-                        Frequency Domain Energy Analysis
-                    </h3>
-
-                    {{ frequency_table | safe }}
-
-                </div>
-
-                {% endif %}
-
-                {% if evaluation_table %}
-
-                <div class="analysis-card">
-
-                    <h3>
-                        Quantitative Evaluation Metrics
-                    </h3>
-
-                    {{ evaluation_table | safe }}
-
-                </div>
-
-                {% endif %}
-
-            </main>
-
-            <!-- RIGHT PANEL -->
-            <aside class="panel">
-
-                <div class="panel-title">
-                    QUICK METRICS
-                </div>
-
-                <div class="metric-card">
-
-                    <strong>MSE</strong>
-
-                    <span>
-                        {{ mse if mse else "Calculated after transform" }}
-                    </span>
-
-                    <small>
-                        Lower value means less pixel-level difference.
-                    </small>
-
-                </div>
-
-                <div class="metric-card">
-
-                    <strong>PSNR</strong>
-
-                    <span>
-                        {{ psnr if psnr else "Calculated after transform" }}
-                    </span>
-
-                    <small>
-                        Higher value means better signal quality.
-                    </small>
-
-                </div>
-
-                <div class="metric-card">
-
-                    <strong>SSIM</strong>
-
-                    <span>
-                        {{ ssim if ssim else "Calculated after transform" }}
-                    </span>
-
-                    <small>
-                        Closer to 1 means higher structural similarity.
-                    </small>
-
-                </div>
-
-                <div class="metric-card">
-
-                    <strong>HF / LF Ratio</strong>
-
-                    <span>
-                        {{ ratio if ratio else "Frequency energy ratio" }}
-                    </span>
-
-                    <small>
-                        Processed HF/LF ratio. Δ shows the shift vs the original
-                        (positive = more high-frequency detail, negative = smoother).
-                    </small>
-
-                </div>
-
-                {% if applied_mode %}
-
-                <div
-                    class="panel-title"
-                    style="margin-top:20px;"
-                >
-                    TRANSFORMATION INFO
-                </div>
-
-                <div class="metric-card">
-
-                    <strong>Mode</strong>
-
-                    <span>{{ applied_mode }}</span>
-
-                    <small>
-                        Final transformation mode applied by the system.
-                    </small>
-
-                </div>
-
-                <div class="metric-card">
-
-                    <strong>Intensity</strong>
-
-                    <span>{{ applied_intensity }}</span>
-
-                    <small>
-                        Strength of the transformation.
-                    </small>
-
-                </div>
-
-                {% endif %}
-
-                {% if csv_report and pdf_report %}
-
-                <div
-                    class="panel-title"
-                    style="margin-top:20px;"
-                >
-                    EXPORT
-                </div>
-
-                <a
-                    class="export-btn"
-                    href="{{ csv_report }}"
-                    download
-                >
-                    Download CSV
-                </a>
-
-                <a
-                    class="export-btn"
-                    href="{{ pdf_report }}"
-                    download
-                >
-                    Download PDF
-                </a>
-
-                {% endif %}
-
-            </aside>
-
+    <div class="studio-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #EAE2D5; padding-bottom:15px; margin-bottom:25px;">
+        <div>
+            <h1 style="margin:0; font-size:26px;">BeautyDSP <span style="color:#D38E8A;">Studio</span></h1>
+            <p style="color:#8A7E78; font-size:12px; margin:4px 0 0;">
+                Digital Signal Processing Based Virtual Filter Studio
+            </p>
         </div>
 
-    </form>
+        <div style="display:flex; gap:10px;">
+            <a href="/" class="tab-btn" style="text-decoration:none; line-height:20px;">Home</a>
 
+            {% if transformed_image %}
+                <a class="tab-btn"
+                   href="/download-gray?image_path={{ transformed_image }}"
+                   style="text-decoration:none; background:#D38E8A; color:white; border-color:#D38E8A; line-height:20px;"
+                   download>
+                   📥 Download Grayscale
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form action="/transform" method="post" enctype="multipart/form-data" id="mainForm">
+        <input type="hidden" name="mode" id="hiddenMode" value="{{ applied_mode if applied_mode else 'none' }}">
+        {% if image_id %}
+            <input type="hidden" name="face_id" value="{{ image_id }}">
+        {% endif %}
+
+        <div class="main-studio-grid" style="display:grid; grid-template-columns: 1fr 460px; gap:30px;">
+
+            <div class="panel">
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <button type="button"
+                            onclick="document.getElementById('fileInput').click()"
+                            class="tab-btn"
+                            style="flex:1;">
+                        📁 Select Photo
+                    </button>
+
+                    <input type="file" id="fileInput" name="file" style="display:none">
+                </div>
+
+                <div id="cameraSourceSection" style="display:none; margin-bottom:20px; text-align:center;">
+                    <img id="cameraFeed"
+                         src=""
+                         style="width:100%; border-radius:15px; background:#000;">
+
+                    <canvas id="capturedCanvas" style="display:none;"></canvas>
+                    <input type="hidden" id="cameraDataInput" name="camera_data">
+
+                    <button type="button"
+                            id="btnCapture"
+                            class="apply-btn"
+                            style="margin-top:10px; background:#D38E8A;">
+                        📸 Capture Photo
+                    </button>
+                </div>
+
+                <div class="studio-preview-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div class="image-box">
+                        <small>ORIGINAL IMAGE</small>
+                        <img id="originalPreview"
+                             src="{{ image_url if image_url else original_image if original_image else '' }}"
+                             style="width:100%; border-radius:12px; display:block;">
+                    </div>
+
+                    <div class="image-box">
+                        <small>FILTER RESULT</small>
+                        <img src="{{ transformed_image if transformed_image else '' }}"
+                             style="width:100%; border-radius:12px;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <button type="submit" class="apply-btn">🛍️ Apply Selected Effects</button>
+
+                <div id="category_title"
+                     style="font-weight:bold; margin-bottom:15px; color:#D38E8A; text-transform:uppercase; font-size:14px; margin-top:15px;">
+                    LIP COLORS
+                </div>
+
+                <div class="filter-carousel" id="tab_ruj">
+    <label class="filter-circle-card">
+        <input type="checkbox" name="creative" value="lip_color" id="lip_check">
+        <div class="circle-avatar">✕</div>
+        <div class="filter-title">None</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="lip_preset" value="#c97b74" onclick="setLip('#c97b74')">
+        <div class="circle-avatar">
+            <img src="/assets/lipsticks/golden_rose.png" style="width:38px;height:48px;object-fit:contain;">
+        </div>
+        <div class="filter-title">Golden Rose Cream</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="lip_preset" value="#b87ac9" onclick="setLip('#b87ac9')">
+        <div class="circle-avatar">
+            <img src="/assets/lipsticks/gucci.png" style="width:38px;height:48px;object-fit:contain;">
+        </div>
+        <div class="filter-title">Gucci plumper</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="lip_preset" value="#db1d56" onclick="setLip('#db1d56')">
+        <div class="circle-avatar">
+            <img src="/assets/lipsticks/mac.png" style="width:38px;height:58px;object-fit:contain;">
+        </div>
+        <div class="filter-title">MAC pink</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="lip_preset" value="#b1121b" onclick="setLip('#b1121b')">
+        <div class="circle-avatar">
+            <img src="/assets/lipsticks/ysl.png" style="width:38px;height:48px;object-fit:contain;">
+        </div>
+        <div class="filter-title">YSL Red</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="lip_preset" value="#1a1214" onclick="setLip('#1a1214')">
+        <div class="circle-avatar">
+            <img src="/assets/lipsticks/revlon.png" style="width:38px;height:48px;object-fit:contain;">
+        </div>
+        <div class="filter-title">Revlon Black</div>
+    </label>
+
+    <input type="hidden" id="lip_color_hex" name="lip_color_hex" value="#c97b74">
+</div>
+
+                <div class="filter-carousel" id="tab_yuz" style="display:none;">
+                    <label class="filter-circle-card">
+                        <input type="radio" name="warp_preset" value="none" checked onclick="setMode('none')">
+                        <div class="circle-avatar">✕</div>
+                        <div class="filter-title">None</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="warp_preset" value="smile" onclick="setMode('smile')">
+                        <div class="circle-avatar">☺</div>
+                        <div class="filter-title">Smile Enhancement</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="warp_preset" value="face_slim" onclick="setMode('face_slim')">
+                        <div class="circle-avatar">📐</div>
+                        <div class="filter-title">Face Slimming</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="warp_preset" value="eyebrow_raise" onclick="setMode('eyebrow_raise')">
+                        <div class="circle-avatar">👁️</div>
+                        <div class="filter-title">Eyebrow Raise</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="warp_preset" value="lip_widen" onclick="setMode('lip_widen')">
+                        <div class="circle-avatar">👄</div>
+                        <div class="filter-title">Lip Widening</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="warp_preset" value="nose_enhance" onclick="setMode('nose_enhance')">
+                        <div class="circle-avatar">👃</div>
+                        <div class="filter-title">Nose Enhance</div>
+                    </label>
+                </div>
+
+                <div class="filter-carousel" id="tab_yas" style="display:none;">
+                    <label class="filter-circle-card">
+                        <input type="radio" name="age_preset" value="none" checked onclick="setMode('none')">
+                        <div class="circle-avatar">✕</div>
+                        <div class="filter-title">None</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="age_preset" value="aging" onclick="setMode('aging')">
+                        <div class="circle-avatar">⏳</div>
+                        <div class="filter-title">Aging</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="age_preset" value="deaging" onclick="setMode('deaging')">
+                        <div class="circle-avatar">✨</div>
+                        <div class="filter-title">De-Aging</div>
+                    </label>
+                </div>
+
+                <div class="filter-carousel" id="tab_gozluk" style="display:none;">
+                    <label class="filter-circle-card">
+                        <input type="radio" name="glasses_style" value="none" checked onclick="setRealtimeEffect('glasses', 0, false)">
+                        <div class="circle-avatar">✕</div>
+                        <div class="filter-title">None</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+    <input type="radio" name="glasses_style" value="aviator">
+
+    <div class="circle-avatar">
+        <img src="/assets/glasses/aviator.png"
+             style="
+                width:45px;
+                height:45px;
+                object-fit:contain;
+             ">
+    </div>
+
+    <div class="filter-title">Aviator</div>
+</label>
+
+                   <label class="filter-circle-card">
+    <input type="radio" name="glasses_style" value="cateye">
+
+    <div class="circle-avatar">
+        <img src="/assets/glasses/cateye.png"
+             style="
+                width:45px;
+                height:45px;
+                object-fit:contain;
+             ">
+    </div>
+
+    <div class="filter-title">Cat Eye</div>
+</label> 
+
+                    <label class="filter-circle-card">
+    <input type="radio" name="glasses_style" value="round">
+
+    <div class="circle-avatar">
+        <img src="/assets/glasses/round.png"
+             style="
+                width:45px;
+                height:45px;
+                object-fit:contain;
+             ">
+    </div>
+
+    <div class="filter-title">Round</div>
+</label>
+
+                    <label class="filter-circle-card">
+    <input type="radio" name="glasses_style" value="square">
+
+    <div class="circle-avatar">
+        <img src="/assets/glasses/square.png"
+             style="
+                width:45px;
+                height:45px;
+                object-fit:contain;
+             ">
+    </div>
+
+    <div class="filter-title">Square</div>
+</label>
+                </div>
+
+                <div class="filter-carousel" id="tab_sac" style="display:none;">
+
+    <label class="filter-circle-card">
+        <input type="checkbox" name="creative" value="hair_color" id="chk_hair">
+        <div class="circle-avatar">✕</div>
+        <div class="filter-title">None</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="hair_preset" value="#d4af37" onclick="setHair('#d4af37')">
+
+        <div class="circle-avatar">
+            <img src="/assets/hair/color_yellow.png"
+                 style="width:38px;height:68px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Yellow</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="hair_preset" value="#1a1a1a" onclick="setHair('#1a1a1a')">
+
+        <div class="circle-avatar">
+            <img src="/assets/hair/color_black.png"
+                 style="width:38px;height:58px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Black</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="hair_preset" value="#e91e63" onclick="setHair('#e91e63')">
+
+        <div class="circle-avatar">
+            <img src="/assets/hair/color_pink.png"
+                 style="width:38px;height:58px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Pink</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="hair_preset" value="#2962ff" onclick="setHair('#2962ff')">
+
+        <div class="circle-avatar">
+            <img src="/assets/hair/color_blue.png"
+                 style="width:38px;height:58px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Blue</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="hair_preset" value="#4a2c0a" onclick="setHair('#4a2c0a')">
+
+        <div class="circle-avatar">
+            <img src="/assets/hair/color_brown.png"
+                 style="width:38px;height:58px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Brown</div>
+    </label>
+
+    <input type="hidden" id="hair_color_hex" name="hair_color_hex" value="#4a2c0a">
+
+</div>
+
+                <div class="filter-carousel" id="tab_goz" style="display:none;">
+
+    <label class="filter-circle-card">
+        <input type="checkbox" name="creative" value="eye_color" id="chk_eye">
+        <div class="circle-avatar">✕</div>
+        <div class="filter-title">None</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="eye_preset" value="#2e7d32" onclick="setEye('#2e7d32')">
+
+        <div class="circle-avatar">
+            <img src="/assets/lenses/lens_green.png"
+                 style="width:48px;height:38px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Green</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="eye_preset" value="#1e6db5" onclick="setEye('#1e6db5')">
+
+        <div class="circle-avatar">
+            <img src="/assets/lenses/lens_blue.png"
+                 style="width:48px;height:38px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Blue</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="eye_preset" value="#b08968" onclick="setEye('#b08968')">
+
+        <div class="circle-avatar">
+            <img src="/assets/lenses/lens_hazel.png"
+                 style="width:48px;height:38px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Hazel</div>
+    </label>
+
+    <label class="filter-circle-card">
+        <input type="radio" name="eye_preset" value="#b39ddb" onclick="setEye('#b39ddb')">
+
+        <div class="circle-avatar">
+            <img src="/assets/lenses/lens_purple.png"
+                 style="width:48px;height:38px;object-fit:contain;">
+        </div>
+
+        <div class="filter-title">Purple</div>
+    </label>
+
+    <input type="hidden" id="eye_color_hex" name="eye_color_hex" value="#1e6db5">
+
+</div>
+
+                <div class="filter-carousel" id="tab_sticker" style="display:none;">
+                    <label class="filter-circle-card">
+                        <input type="radio" name="sticker_preset" value="none" checked onclick="setRealtimeEffect('stickers', 0, false)">
+                        <div class="circle-avatar">✕</div>
+                        <div class="filter-title">None</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="sticker_preset" value="cat_ears" onclick="setRealtimeEffect('stickers', 0, true)">
+                        <div class="circle-avatar">🐱</div>
+                        <div class="filter-title">Cat Ears</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="sticker_preset" value="crown" onclick="setRealtimeEffect('stickers', 1, true)">
+                        <div class="circle-avatar">👑</div>
+                        <div class="filter-title">Crown</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="sticker_preset" value="freckles" onclick="setRealtimeEffect('stickers', 2, true)">
+                        <div class="circle-avatar">🌸</div>
+                        <div class="filter-title">Freckles</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="sticker_preset" value="sparkles" onclick="setRealtimeEffect('stickers', 3, true)">
+                        <div class="circle-avatar">✨</div>
+                        <div class="filter-title">Sparkles</div>
+                    </label>
+
+                    <input type="hidden" name="sticker_effect" id="sticker_effect" value="none">
+                </div>
+
+                <div class="filter-carousel" id="tab_frames" style="display:none;">
+                    <label class="filter-circle-card">
+                        <input type="checkbox" name="creative" value="frame_photo" id="chk_frame">
+                        <div class="circle-avatar">✕</div>
+                        <div class="filter-title">No Frame</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="f_radio" onclick="setFrame('classic')">
+                        <div class="circle-avatar">🪵</div>
+                        <div class="filter-title">Classic</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="f_radio" onclick="setFrame('modern')">
+                        <div class="circle-avatar">🖼️</div>
+                        <div class="filter-title">Modern</div>
+                    </label>
+
+                    <label class="filter-circle-card">
+                        <input type="radio" name="f_radio" onclick="setFrame('polaroid')">
+                        <div class="circle-avatar">📸</div>
+                        <div class="filter-title">Polaroid</div>
+                    </label>
+
+                    <input type="hidden" name="frame_style" id="frame_style" value="classic">
+                </div>
+
+                <div class="studio-tabs" style="display:flex; gap:6px; margin-top:20px; border-top:1px solid #EAE2D5; padding-top:20px; overflow-x:auto;">
+                    <button type="button" class="tab-btn active" onclick="switchTab('ruj', 'Lip')">Lip</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('yuz', 'Face')">Face</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('yas', 'Age')">Age</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('gozluk', 'Glasses')">Glasses</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('sac', 'Hair')">Hair</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('goz', 'Eye Color')">Eyes</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('sticker', 'Sticker')">Sticker</button>
+                    <button type="button" class="tab-btn" onclick="switchTab('frames', 'Frame')">Frame</button>
+                </div>
+
+                <div style="margin-top:25px;" class="intensity-box">
+                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; color:#8A7E78;">
+                        <span>Effect Intensity</span>
+                        <span id="sliderValue" style="color:#D38E8A; font-weight:700;">
+                            {{ applied_intensity if applied_intensity else '1.0' }}
+                        </span>
+                    </div>
+
+                    <input type="range"
+                           id="intensitySlider"
+                           name="intensity"
+                           min="0.1"
+                           max="2.0"
+                           step="0.1"
+                           value="{{ applied_intensity if applied_intensity else '1.0' }}"
+                           style="width:100%">
+                </div>
+
+                {% if csv_report and pdf_report %}
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <a class="tab-btn" href="{{ csv_report }}" style="text-decoration:none;" download>CSV Report</a>
+                    <a class="tab-btn" href="{{ pdf_report }}" style="text-decoration:none;" download>PDF Report</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if images or frequency_table or evaluation_table %}
+        <div class="analysis-section" style="background:#FFFFFF; border-radius:20px; padding:20px; margin-top:25px; border:1px solid #EAE2D5;">
+            <div style="font-weight:bold; color:#3D3431; margin-bottom:15px; text-transform:uppercase; font-size:14px; border-left:3px solid #D38E8A; padding-left:8px;">
+                📉 DSP & Preprocessing Engineering Lab Results
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:25px;">
+
+    <div class="image-box"><small>Original Input</small><img src="{{ images.original_input }}" style="width:100%; border-radius:8px;"></div>
+    <div class="image-box"><small>Detected Face Region</small><img src="{{ images.bbox }}" style="width:100%; border-radius:8px;"></div>
+    <div class="image-box"><small>Cropped Face</small><img src="{{ images.cropped }}" style="width:100%; border-radius:8px;"></div>
+    <div class="image-box"><small>Resized Face</small><img src="{{ images.resized }}" style="width:100%; border-radius:8px;"></div>
+    <div class="image-box"><small>Grayscale Face</small><img src="{{ images.grayscale }}" style="width:100%; border-radius:8px;"></div>
+    <div class="image-box"><small>Full Landmark Overlay</small><img src="{{ images.landmark_full }}" style="width:100%; border-radius:8px;"></div>
+    <div class="image-box"><small>Grouped Landmark Overlay</small><img src="{{ images.landmark_grouped }}" style="width:100%; border-radius:8px;"></div>
+
+</div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; border-top:1px solid #EAE2D5; padding-top:20px;">
+                <div class="image-box">
+                    <small>Original Spectrum (2D-FFT)</small>
+                    <img src="{{ orig_spectrum }}" style="width:100%; border-radius:12px;">
+                </div>
+
+                <div class="image-box">
+                    <small>Processed Spectrum (2D-FFT)</small>
+                    <img src="{{ proc_spectrum }}" style="width:100%; border-radius:12px;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
+                <div>
+                    <h4 style="margin:0 0 8px 0; font-size:13px;">Frequency Energy Table</h4>
+                    {{ frequency_table | safe }}
+                </div>
+
+                <div>
+                    <h4 style="margin:0 0 8px 0; font-size:13px;">Signal Quality Evaluation</h4>
+                    {{ evaluation_table | safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </form>
 </div>
 
 <script>
+function setLip(color) {
+    document.getElementById('lip_color_hex').value = color;
+    document.getElementById('lip_check').checked = true;
+}
 
-const fileInput = document.getElementById("fileInput");
+function setEye(color) {
+    document.getElementById('eye_color_hex').value = color;
+    document.getElementById('chk_eye').checked = true;
+}
 
-const originalPreview =
-    document.getElementById("originalPreview");
+function setHair(color) {
+    document.getElementById('hair_color_hex').value = color;
+    document.getElementById('chk_hair').checked = true;
+}
 
-const originalPlaceholder =
-    document.getElementById("originalPlaceholder");
+function setFrame(style) {
+    document.getElementById('frame_style').value = style;
+    document.getElementById('chk_frame').checked = true;
+}
+
+function setMode(mode) {
+    document.getElementById('hiddenMode').value = mode;
+}
+
+function setSticker(effect) {
+    document.getElementById('sticker_effect').value = effect;
+}
+
+function switchTab(id, title) {
+    document.querySelectorAll('.filter-carousel').forEach(c => c.style.display = 'none');
+    document.getElementById('tab_' + id).style.display = 'flex';
+    document.getElementById('category_title').innerText = title.toUpperCase();
+
+    document.querySelectorAll('.studio-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+}
+
+const cameraSection = document.getElementById('cameraSourceSection');
+const fileInput = document.getElementById('fileInput');
+const cameraDataInput = document.getElementById('cameraDataInput');
+const originalPreview = document.getElementById('originalPreview');
+
+function openRealtimeCamera() {
+    cameraSection.style.display = "block";
+
+    document.getElementById("cameraFeed").src =
+        "/camera_feed?" + Date.now();
+}
+
+document.getElementById('btnCapture').addEventListener('click', () => {
+    const cameraFeed = document.getElementById('cameraFeed');
+
+    if (!cameraFeed || !cameraFeed.src) {
+        alert("Camera feed was not found.");
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = cameraFeed.clientWidth;
+    canvas.height = cameraFeed.clientHeight;
+
+    ctx.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg');
+
+    cameraDataInput.value = dataUrl;
+    originalPreview.src = dataUrl;
+    originalPreview.style.display = 'block';
+
+    alert("Photo captured. Now click Apply Selected Effects.");
+});
 
 if (fileInput && originalPreview) {
-
-    fileInput.addEventListener("change", function(e) {
-
+    fileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
 
         if (!file) return;
@@ -525,61 +676,43 @@ if (fileInput && originalPreview) {
         const reader = new FileReader();
 
         reader.onload = function(event) {
-
             originalPreview.src = event.target.result;
-
-            originalPreview.style.display = "block";
-
-            if (originalPlaceholder) {
-                originalPlaceholder.style.display = "none";
-            }
+            originalPreview.style.display = 'block';
         };
 
         reader.readAsDataURL(file);
     });
 }
 
-const slider = document.getElementById("intensitySlider");
+async function setRealtimeEffect(mode, index, enabled = true) {
+    const formData = new FormData();
 
-const sliderValue =
-    document.getElementById("sliderValue");
+    formData.append("mode", mode);
+    formData.append("index", index);
+    formData.append("enabled", enabled);
 
-if (slider && sliderValue) {
+    await fetch("/set_effect", {
+        method: "POST",
+        body: formData
+    });
+}
 
-    slider.addEventListener("input", function() {
+const slider = document.getElementById('intensitySlider');
+const sliderValue = document.getElementById('sliderValue');
 
+if (slider) {
+    slider.addEventListener('input', () => {
         sliderValue.textContent = slider.value;
-
     });
 }
 
-document.querySelectorAll('input[type="color"][data-checkbox], select[data-checkbox]')
-    .forEach(function(el) {
-        const checkboxId = el.getAttribute("data-checkbox");
-        const checkbox = document.getElementById(checkboxId);
-        if (!checkbox) return;
+window.addEventListener("DOMContentLoaded", () => {
+    const openCamera = "{{ open_camera if open_camera else 0 }}";
 
-        const eventName = el.tagName === "SELECT" ? "change" : "input";
-        el.addEventListener(eventName, function() {
-            checkbox.checked = true;
-        });
-    });
-
-const form = document.querySelector("form");
-
-const button = document.getElementById("transformBtn");
-
-if (form && button) {
-
-    form.addEventListener("submit", function() {
-
-        button.innerHTML = "Processing...";
-
-        button.disabled = true;
-
-    });
-}
-
+    if (openCamera == "1") {
+        openRealtimeCamera();
+    }
+});
 </script>
 
 </body>
