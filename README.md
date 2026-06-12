@@ -1,6 +1,6 @@
-# Facial Impact Project
+# Facial Image Project
 
-Facial Impact Project is a real-time facial image processing and beauty enhancement application developed using Python, OpenCV, MediaPipe, and FastAPI.
+Facial Image Project is a real-time facial image processing and beauty enhancement application developed using Python, OpenCV, MediaPipe, and FastAPI.
 
 The project provides a variety of facial editing effects including facial landmark visualization, virtual makeup, eye color simulation, hair color transformation, facial reshaping, aging/de-aging effects, glasses overlays, sticker filters, and real-time camera processing.
 
