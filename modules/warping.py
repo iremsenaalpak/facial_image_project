@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 
-from utils.image_utils import blend_with_mask, create_polygon_mask, recolor_preserve_luminance
+from utils.image_utils import blend_with_mask, create_polygon_mask, recolor_preserve_luminance, constrain_mask_to_head
 from modules.hair_segmenter import get_hair_segmenter
 
 
@@ -831,9 +831,13 @@ class FaceWarper:
         mask = get_hair_segmenter().segment(image)
         if not np.any(mask > 0.5):
             return image.copy()
+        # Keep only hair near the head — the segmenter sometimes tags background
+        # (a wall, a poster) as hair, which shows up on full frames.
+        binary = constrain_mask_to_head((mask > 0.5).astype(np.uint8), landmarks)
+        if not np.any(binary):
+            return image.copy()
         # Dilate to grab strand outliers the model may have just-barely missed
-        binary = (mask > 0.5).astype(np.uint8) * 255
-        binary = cv2.dilate(binary, np.ones((3, 3), np.uint8), iterations=1)
+        binary = cv2.dilate(binary * 255, np.ones((3, 3), np.uint8), iterations=1)
         mask = binary.astype(np.float32) / 255.0
         # Feather for natural edges
         mask = cv2.GaussianBlur(mask, (0, 0), 2.0)

@@ -33,6 +33,10 @@ class HairSegmenter:
             output_confidence_masks=True,
         )
         self._segmenter = mp_vision.ImageSegmenter.create_from_options(options)
+        # The live camera segments on a background thread while the photo path
+        # may segment in FastAPI's threadpool. The underlying graph isn't safe
+        # for concurrent calls, so serialize them.
+        self._call_lock = Lock()
 
     def _segment_classes(self, image_bgr: np.ndarray, classes: list) -> np.ndarray:
         """Return a float32 probability map covering the union of the given class indices.
@@ -46,21 +50,26 @@ class HairSegmenter:
         h, w = image_bgr.shape[:2]
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        result = self._segmenter.segment(mp_image)
-
         max_class = max(classes)
         cat_mask = None
-        if result.category_mask is not None:
-            cat = np.asarray(result.category_mask.numpy_view())
-            cat_mask = np.isin(cat, classes).astype(np.float32)
-
         conf_mask = None
-        if result.confidence_masks and len(result.confidence_masks) > max_class:
-            shape = np.asarray(result.confidence_masks[classes[0]].numpy_view()).shape
-            conf_mask = np.zeros(shape, dtype=np.float32)
-            for c in classes:
-                cmask = np.asarray(result.confidence_masks[c].numpy_view(), dtype=np.float32)
-                conf_mask = np.maximum(conf_mask, cmask)
+
+        # Hold the lock through the segment call AND the numpy_view reads: those
+        # views alias the segmenter's internal buffers, which the next segment
+        # call would overwrite. Copy the data out into independent arrays here.
+        with self._call_lock:
+            result = self._segmenter.segment(mp_image)
+
+            if result.category_mask is not None:
+                cat = np.asarray(result.category_mask.numpy_view())
+                cat_mask = np.isin(cat, classes).astype(np.float32)
+
+            if result.confidence_masks and len(result.confidence_masks) > max_class:
+                shape = np.asarray(result.confidence_masks[classes[0]].numpy_view()).shape
+                conf_mask = np.zeros(shape, dtype=np.float32)
+                for c in classes:
+                    cmask = np.asarray(result.confidence_masks[c].numpy_view(), dtype=np.float32)
+                    conf_mask = np.maximum(conf_mask, cmask)
 
         if cat_mask is None and conf_mask is None:
             return np.zeros((h, w), dtype=np.float32)

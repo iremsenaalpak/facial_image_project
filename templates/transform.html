@@ -101,6 +101,13 @@
                         📁 Select Photo
                     </button>
 
+                    <button type="button"
+                            onclick="openRealtimeCamera()"
+                            class="tab-btn"
+                            style="flex:1;">
+                        📷 Live Camera
+                    </button>
+
                     <input type="file" id="fileInput" name="file" style="display:none">
                 </div>
 
@@ -146,7 +153,7 @@
 
                 <div class="filter-carousel" id="tab_ruj">
     <label class="filter-circle-card">
-        <input type="checkbox" name="creative" value="lip_color" id="lip_check">
+        <input type="radio" name="lip_preset" value="none" checked onclick="clearLip()">
         <div class="circle-avatar">✕</div>
         <div class="filter-title">None</div>
     </label>
@@ -191,6 +198,7 @@
         <div class="filter-title">Revlon Black</div>
     </label>
 
+    <input type="checkbox" name="creative" value="lip_color" id="lip_check" style="display:none">
     <input type="hidden" id="lip_color_hex" name="lip_color_hex" value="#c97b74">
 </div>
 
@@ -254,13 +262,13 @@
 
                 <div class="filter-carousel" id="tab_gozluk" style="display:none;">
                     <label class="filter-circle-card">
-                        <input type="radio" name="glasses_style" value="none" checked onclick="setRealtimeEffect('glasses', 0, false)">
+                        <input type="radio" name="glasses_style" value="none" checked onclick="pushLiveSettings()">
                         <div class="circle-avatar">✕</div>
                         <div class="filter-title">None</div>
                     </label>
 
                     <label class="filter-circle-card">
-    <input type="radio" name="glasses_style" value="aviator">
+    <input type="radio" name="glasses_style" value="aviator" onclick="pushLiveSettings()">
 
     <div class="circle-avatar">
         <img src="/assets/glasses/aviator.png"
@@ -275,7 +283,7 @@
 </label>
 
                    <label class="filter-circle-card">
-    <input type="radio" name="glasses_style" value="cateye">
+    <input type="radio" name="glasses_style" value="cateye" onclick="pushLiveSettings()">
 
     <div class="circle-avatar">
         <img src="/assets/glasses/cateye.png"
@@ -287,10 +295,10 @@
     </div>
 
     <div class="filter-title">Cat Eye</div>
-</label> 
+</label>
 
                     <label class="filter-circle-card">
-    <input type="radio" name="glasses_style" value="round">
+    <input type="radio" name="glasses_style" value="round" onclick="pushLiveSettings()">
 
     <div class="circle-avatar">
         <img src="/assets/glasses/round.png"
@@ -305,7 +313,7 @@
 </label>
 
                     <label class="filter-circle-card">
-    <input type="radio" name="glasses_style" value="square">
+    <input type="radio" name="glasses_style" value="square" onclick="pushLiveSettings()">
 
     <div class="circle-avatar">
         <img src="/assets/glasses/square.png"
@@ -323,7 +331,7 @@
                 <div class="filter-carousel" id="tab_sac" style="display:none;">
 
     <label class="filter-circle-card">
-        <input type="checkbox" name="creative" value="hair_color" id="chk_hair">
+        <input type="radio" name="hair_preset" value="none" checked onclick="clearHair()">
         <div class="circle-avatar">✕</div>
         <div class="filter-title">None</div>
     </label>
@@ -383,6 +391,7 @@
         <div class="filter-title">Brown</div>
     </label>
 
+    <input type="checkbox" name="creative" value="hair_color" id="chk_hair" style="display:none">
     <input type="hidden" id="hair_color_hex" name="hair_color_hex" value="#4a2c0a">
 
 </div>
@@ -390,7 +399,7 @@
                 <div class="filter-carousel" id="tab_goz" style="display:none;">
 
     <label class="filter-circle-card">
-        <input type="checkbox" name="creative" value="eye_color" id="chk_eye">
+        <input type="radio" name="eye_preset" value="none" checked onclick="clearEye()">
         <div class="circle-avatar">✕</div>
         <div class="filter-title">None</div>
     </label>
@@ -439,37 +448,38 @@
         <div class="filter-title">Purple</div>
     </label>
 
+    <input type="checkbox" name="creative" value="eye_color" id="chk_eye" style="display:none">
     <input type="hidden" id="eye_color_hex" name="eye_color_hex" value="#1e6db5">
 
 </div>
 
                 <div class="filter-carousel" id="tab_sticker" style="display:none;">
                     <label class="filter-circle-card">
-                        <input type="radio" name="sticker_preset" value="none" checked onclick="setRealtimeEffect('stickers', 0, false)">
+                        <input type="radio" name="sticker_preset" value="none" checked onclick="setSticker('none')">
                         <div class="circle-avatar">✕</div>
                         <div class="filter-title">None</div>
                     </label>
 
                     <label class="filter-circle-card">
-                        <input type="radio" name="sticker_preset" value="cat_ears" onclick="setRealtimeEffect('stickers', 0, true)">
+                        <input type="radio" name="sticker_preset" value="cat_ears" onclick="setSticker('cat_ears')">
                         <div class="circle-avatar">🐱</div>
                         <div class="filter-title">Cat Ears</div>
                     </label>
 
                     <label class="filter-circle-card">
-                        <input type="radio" name="sticker_preset" value="crown" onclick="setRealtimeEffect('stickers', 1, true)">
+                        <input type="radio" name="sticker_preset" value="crown" onclick="setSticker('crown')">
                         <div class="circle-avatar">👑</div>
                         <div class="filter-title">Crown</div>
                     </label>
 
                     <label class="filter-circle-card">
-                        <input type="radio" name="sticker_preset" value="freckles" onclick="setRealtimeEffect('stickers', 2, true)">
+                        <input type="radio" name="sticker_preset" value="freckles" onclick="setSticker('freckles')">
                         <div class="circle-avatar">🌸</div>
                         <div class="filter-title">Freckles</div>
                     </label>
 
                     <label class="filter-circle-card">
-                        <input type="radio" name="sticker_preset" value="sparkles" onclick="setRealtimeEffect('stickers', 3, true)">
+                        <input type="radio" name="sticker_preset" value="sparkles" onclick="setSticker('sparkles')">
                         <div class="circle-avatar">✨</div>
                         <div class="filter-title">Sparkles</div>
                     </label>
@@ -479,7 +489,7 @@
 
                 <div class="filter-carousel" id="tab_frames" style="display:none;">
                     <label class="filter-circle-card">
-                        <input type="checkbox" name="creative" value="frame_photo" id="chk_frame">
+                        <input type="radio" name="f_radio" value="none" checked onclick="clearFrame()">
                         <div class="circle-avatar">✕</div>
                         <div class="filter-title">No Frame</div>
                     </label>
@@ -502,6 +512,13 @@
                         <div class="filter-title">Polaroid</div>
                     </label>
 
+                    <label class="filter-circle-card">
+                        <input type="radio" name="f_radio" onclick="setFrame('vintage')">
+                        <div class="circle-avatar">🕰️</div>
+                        <div class="filter-title">Vintage</div>
+                    </label>
+
+                    <input type="checkbox" name="creative" value="frame_photo" id="chk_frame" style="display:none">
                     <input type="hidden" name="frame_style" id="frame_style" value="classic">
                 </div>
 
@@ -593,29 +610,80 @@
 function setLip(color) {
     document.getElementById('lip_color_hex').value = color;
     document.getElementById('lip_check').checked = true;
+    pushLiveSettings();
 }
 
 function setEye(color) {
     document.getElementById('eye_color_hex').value = color;
     document.getElementById('chk_eye').checked = true;
+    pushLiveSettings();
 }
 
 function setHair(color) {
     document.getElementById('hair_color_hex').value = color;
     document.getElementById('chk_hair').checked = true;
+    pushLiveSettings();
 }
 
 function setFrame(style) {
     document.getElementById('frame_style').value = style;
     document.getElementById('chk_frame').checked = true;
+    pushLiveSettings();
 }
+
+// "None" cards turn an effect off. The card is a radio in the same group as the
+// choices, so picking it already clears their highlight; we just flip the
+// hidden on/off flag and refresh the live feed.
+function clearLip()   { document.getElementById('lip_check').checked = false; pushLiveSettings(); }
+function clearEye()   { document.getElementById('chk_eye').checked   = false; pushLiveSettings(); }
+function clearHair()  { document.getElementById('chk_hair').checked  = false; pushLiveSettings(); }
+function clearFrame() { document.getElementById('chk_frame').checked = false; pushLiveSettings(); }
 
 function setMode(mode) {
     document.getElementById('hiddenMode').value = mode;
+    pushLiveSettings();
 }
 
 function setSticker(effect) {
     document.getElementById('sticker_effect').value = effect;
+    pushLiveSettings();
+}
+
+// Gather every current selection and push it to the live camera engine so the
+// webcam preview reflects all choices (not just glasses/stickers). Mirrors the
+// fields the photo /transform form submits.
+async function pushLiveSettings() {
+    const fd = new FormData();
+    fd.append("mode", document.getElementById('hiddenMode').value || "none");
+
+    const slider = document.getElementById('intensitySlider');
+    fd.append("intensity", slider ? slider.value : "1.0");
+
+    document.querySelectorAll('input[name="creative"]:checked')
+        .forEach(c => fd.append("creative", c.value));
+
+    const glasses = document.querySelector('input[name="glasses_style"]:checked');
+    fd.append("glasses_style", glasses ? glasses.value : "none");
+
+    fd.append("lip_color_hex", document.getElementById('lip_color_hex').value);
+    fd.append("eye_color_hex", document.getElementById('eye_color_hex').value);
+    fd.append("hair_color_hex", document.getElementById('hair_color_hex').value);
+    fd.append("sticker_effect", document.getElementById('sticker_effect').value);
+    fd.append("frame_style", document.getElementById('frame_style').value);
+
+    // A photo frame draws its own border into the image; the preview's rounded
+    // corners would clip that border, so square off the feed while a frame is on.
+    const feed = document.getElementById('cameraFeed');
+    if (feed) {
+        feed.style.borderRadius =
+            document.getElementById('chk_frame').checked ? '0' : '15px';
+    }
+
+    try {
+        await fetch("/set_effect", { method: "POST", body: fd });
+    } catch (e) {
+        /* live preview is best-effort; ignore transient network errors */
+    }
 }
 
 function switchTab(id, title) {
@@ -640,6 +708,9 @@ function openRealtimeCamera() {
 
     document.getElementById("cameraFeed").src =
         "/camera_feed?" + Date.now();
+
+    // Apply whatever is already selected so the feed starts correct.
+    pushLiveSettings();
 }
 
 document.getElementById('btnCapture').addEventListener('click', () => {
@@ -684,25 +755,17 @@ if (fileInput && originalPreview) {
     });
 }
 
-async function setRealtimeEffect(mode, index, enabled = true) {
-    const formData = new FormData();
-
-    formData.append("mode", mode);
-    formData.append("index", index);
-    formData.append("enabled", enabled);
-
-    await fetch("/set_effect", {
-        method: "POST",
-        body: formData
-    });
-}
-
 const slider = document.getElementById('intensitySlider');
 const sliderValue = document.getElementById('sliderValue');
 
 if (slider) {
     slider.addEventListener('input', () => {
         sliderValue.textContent = slider.value;
+    });
+    // Push on release (not every pixel) so the live warp intensity updates
+    // without flooding the server.
+    slider.addEventListener('change', () => {
+        pushLiveSettings();
     });
 }
 

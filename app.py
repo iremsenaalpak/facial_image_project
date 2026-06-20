@@ -18,7 +18,7 @@ from modules.face_landmark import FaceLandmarkDetector
 from modules.preprocessing import run_preprocessing_pipeline
 from modules.visualization import visualize_face_data
 from modules.warping import FaceWarper
-from modules.aging import aging_deaging_pipeline
+from modules.aging import aging_deaging_pipeline, grey_hair
 from modules.export_utils import export_metrics_to_csv, export_metrics_to_pdf
 from modules.frequency_analysis import run_frequency_analysis
 from modules.evaluation import run_evaluation
@@ -84,11 +84,28 @@ def camera_feed():
 
 @app.post("/set_effect")
 async def set_camera_effect(
-    mode: str = Form(...),
-    index: int = Form(...),
-    enabled: bool = Form(True)
+    mode: str = Form("none"),
+    intensity: float = Form(1.0),
+    creative: List[str] = Form(default=[]),
+    glasses_style: str = Form("none"),
+    lip_color_hex: str = Form("#c0392b"),
+    eye_color_hex: str = Form("#1e6db5"),
+    hair_color_hex: str = Form("#4a2c0a"),
+    sticker_effect: str = Form("none"),
+    frame_style: str = Form("none"),
 ):
-    set_effect(mode, index, enabled)
+    # Colors and the frame are only active when their creative checkbox is
+    # ticked; otherwise pass None/"none" so the live engine skips them.
+    set_effect(
+        mode=mode,
+        intensity=intensity,
+        lip_color=_hex_to_bgr(lip_color_hex) if "lip_color" in creative else None,
+        eye_color=_hex_to_bgr(eye_color_hex) if "eye_color" in creative else None,
+        hair_color=_hex_to_bgr(hair_color_hex) if "hair_color" in creative else None,
+        glasses_style=glasses_style,
+        sticker=sticker_effect,
+        frame_style=frame_style if "frame_photo" in creative else "none",
+    )
     return JSONResponse({"status": "ok"})
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
@@ -99,6 +116,25 @@ def _hex_to_bgr(hex_color: str):
     hex_color = hex_color.lstrip("#")
     if len(hex_color) != 6: return (40, 80, 40)
     return int(hex_color[4:6], 16), int(hex_color[2:4], 16), int(hex_color[0:2], 16)
+
+
+def grey_hair_fullimage(image, landmarks, intensity):
+    """Grey hair on the full-resolution output (not the face crop) so the whole
+    head is covered, using a head-constrained segmentation mask. Mirrors how
+    apply_hair_color is applied at full image scale."""
+    try:
+        from modules.hair_segmenter import get_hair_segmenter
+        from utils.image_utils import constrain_mask_to_head
+        mask = get_hair_segmenter().segment(image)
+        binary = constrain_mask_to_head((mask > 0.5).astype(np.uint8), landmarks)
+        if not np.any(binary):
+            return image
+        binary = cv2.dilate(binary * 255, np.ones((3, 3), np.uint8), iterations=1)
+        feathered = cv2.GaussianBlur(binary.astype(np.float32) / 255.0, (0, 0), 2.0)
+        return grey_hair(image, feathered, intensity)
+    except Exception as e:
+        print("Hair greying skipped:", e)
+        return image
 
 
 def draw_bbox(image, bbox, color=(0, 255, 0), thickness=2):
@@ -320,7 +356,7 @@ def apply_sticker_effect(image, effect, landmarks=None):
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html", {"request": request})
 
 
 from fastapi.responses import RedirectResponse # En üstteki importlarına bunu eklemeyi unutma!
@@ -368,6 +404,7 @@ def transform_home(
     image_url = f"/uploads/{image_id}{ext}" if image_id else None
 
     return templates.TemplateResponse(
+        request,
         "transform.html",
         {
             "request": request,
@@ -395,7 +432,7 @@ async def transform_image(
             data = base64.b64decode(encoded)
             with open(uploaded_path, "wb") as f: f.write(data)
         except Exception as e:
-            return templates.TemplateResponse("transform.html", {"request": request, "error_message": f"Kamera verisi çözülemedi: {str(e)}"})
+            return templates.TemplateResponse(request, "transform.html", {"request": request, "error_message": f"Kamera verisi çözülemedi: {str(e)}"})
     elif file and file.filename:
         file_ext = os.path.splitext(file.filename)[1].lower()
         uploaded_path = os.path.join(UPLOAD_DIR, f"{face_id}{file_ext}")
@@ -405,10 +442,10 @@ async def transform_image(
         for ext in ALLOWED_EXTENSIONS.union({".jpg"}):
             p = os.path.join(UPLOAD_DIR, f"{face_id}{ext}")
             if os.path.exists(p): uploaded_path = p; break
-        if not uploaded_path: return templates.TemplateResponse("transform.html", {"request": request, "error_message": "Resim dosyası bulunamadı."})
+        if not uploaded_path: return templates.TemplateResponse(request, "transform.html", {"request": request, "error_message": "Resim dosyası bulunamadı."})
 
     result = run_preprocessing_pipeline(uploaded_path)
-    if not result["success"]: return templates.TemplateResponse("transform.html", {"request": request, "error_message": result["message"]})
+    if not result["success"]: return templates.TemplateResponse(request, "transform.html", {"request": request, "error_message": result["message"]})
 
     original_image = result["original_image"]
     face_bbox = result["face_bbox"]
@@ -417,14 +454,14 @@ async def transform_image(
     grayscale_face = result["grayscale_face"]
     face_image = resized_face if resized_face is not None else cropped_face
 
-    if face_image is None: return templates.TemplateResponse("transform.html", {"request": request, "error_message": "Yüz haritası çıkartılamadı."})
+    if face_image is None: return templates.TemplateResponse(request, "transform.html", {"request": request, "error_message": "Yüz haritası çıkartılamadı."})
     if len(face_image.shape) == 2: face_image = cv2.cvtColor(face_image, cv2.COLOR_GRAY2BGR)
 
     detector = FaceLandmarkDetector()
     lm_result = detector.detect(face_image)
     detector.close()
 
-    if not lm_result["success"]: return templates.TemplateResponse("transform.html", {"request": request, "error_message": f"Landmark hatası: {lm_result['message']}"})
+    if not lm_result["success"]: return templates.TemplateResponse(request, "transform.html", {"request": request, "error_message": f"Landmark hatası: {lm_result['message']}"})
 
     landmarks = lm_result["landmarks"]
     warper = FaceWarper()
@@ -480,9 +517,12 @@ async def transform_image(
     nothing_selected = (mode == "none" and not creative and glasses_style == "none" and sticker_effect == "none")
     if not nothing_selected: final_output[y:y+h, x:x+w] = cv2.resize(transformed, (w, h))
 
-    if "hair_color" in creative or sticker_effect != "none":
+    if "hair_color" in creative or sticker_effect != "none" or mode == "aging":
         cropped_h, cropped_w = face_image.shape[:2]
         translated_lms = [(x + int(lx * w / max(cropped_w, 1)), y + int(ly * h / max(cropped_h, 1))) for (lx, ly) in (lm2_pts if needs_creative else landmarks)]
+        # Aging greys hair on the FULL image (the crop-based aging above can't —
+        # hair extends well beyond the face bbox, which left a rectangular band).
+        if mode == "aging": final_output = grey_hair_fullimage(final_output, translated_lms, max(0.0, min(intensity, 2.0)) / 2.0)
         if "hair_color" in creative: final_output = warper.apply_hair_color(final_output, translated_lms, color=_hex_to_bgr(hair_color_hex))
         if sticker_effect != "none": final_output = apply_sticker_effect(final_output, sticker_effect, translated_lms)
 
@@ -525,7 +565,7 @@ async def transform_image(
 }
 
     return templates.TemplateResponse(
-        "transform.html", {
+        request, "transform.html", {
             "request": request, "original_image": f"/results/{result_uid}_orig.jpg", "transformed_image": f"/results/{result_uid}_out.jpg",
             "orig_spectrum": f"/results/{result_uid}_orig_spectrum.jpg", "proc_spectrum": f"/results/{result_uid}_proc_spectrum.jpg",
             "frequency_table": freq_result["html_table"], "evaluation_table": evaluation_table_html, "mse": round(evaluation_metrics["mse"], 4),

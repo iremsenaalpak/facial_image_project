@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from utils.image_utils import recolor_preserve_luminance
+
 
 # MediaPipe FaceMesh landmark indices (refine_landmarks=True, 478 points)
 FACE_OVAL = [
@@ -158,9 +160,54 @@ def high_frequency_boost(image, intensity=0.5):
     blurred = cv2.GaussianBlur(img_float, (0, 0), sigmaX=2.5)
     high_freq = img_float - blurred
 
-    gain = 0.15 + 0.30 * intensity
+    gain = 0.15 + 0.25 * intensity
     boosted = img_float + high_freq * gain
     return clip_uint8(boosted)
+
+
+def deepen_skin_shadows(image, intensity=0.5):
+    """
+    Natural crease/wrinkle deepening — no drawn marks.
+
+    Darkens the regions that are *already* in shadow on the face (the real
+    creases: nasolabial folds, under-eye, forehead lines, mouth corners) by
+    amplifying wherever local luminance dips below its neighbourhood. Two scales
+    catch both fine lines and broader folds. Because it follows the image's own
+    structure it reads as natural at any head angle, unlike landmark-drawn lines.
+    """
+    intensity = np.clip(intensity, 0, 1)
+
+    img = image.astype(np.float32)
+    h, w = image.shape[:2]
+
+    # The shadow map is smooth, so build it at half resolution for speed and
+    # upscale — roughly 4x fewer pixels through the (costly) large blur.
+    small = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY),
+                       (max(w // 2, 1), max(h // 2, 1)),
+                       interpolation=cv2.INTER_AREA).astype(np.float32)
+    base = max(small.shape[:2])
+
+    shadow = np.zeros_like(small)
+    # Fine scale -> pores / fine lines; medium scale -> nasolabial & forehead folds.
+    for sigma, weight in ((base * 0.010, 0.6), (base * 0.035, 1.0)):
+        blur = cv2.GaussianBlur(small, (0, 0), sigmaX=max(sigma, 1.0))
+        deficit = np.clip(blur - small, 0.0, None)   # darker than its surroundings
+        shadow += weight * deficit
+
+    # Protect already-dark features (eyebrows, nostrils, hairline): real skin
+    # creases are mid-tone dips, so fade the effect out below ~100 luminance.
+    feature_gate = np.clip((small - 55.0) / 45.0, 0.0, 1.0)
+    shadow *= feature_gate
+
+    # Robust normalise so a handful of very dark pixels don't dominate.
+    scale = float(np.percentile(shadow, 99)) + 1e-3
+    shadow = np.clip(shadow / scale, 0.0, 1.0)
+    shadow = cv2.resize(shadow, (w, h), interpolation=cv2.INTER_LINEAR)
+    shadow = cv2.GaussianBlur(shadow, (0, 0), sigmaX=1.5)
+
+    # Darken proportionally to existing shadow depth.
+    darken = 1.0 - (0.40 * intensity) * shadow[:, :, np.newaxis]
+    return clip_uint8(img * darken)
 
 
 def fft_high_pass_aging(image, intensity=0.5):
@@ -380,73 +427,78 @@ def add_wrinkle_lines(image, intensity=0.5, landmarks=None):
     result = cv2.addWeighted(image, 1.0, overlay, alpha, 0)
     return clip_uint8(result)
 
-def add_gray_hair(image, intensity=0.5):
-    intensity = np.clip(intensity, 0, 1)
+def grey_hair(image, hair_mask, intensity=0.5):
+    """
+    Grey the hair given a hair-probability mask (float32 HxW, values in [0, 1]
+    or [0, 255]). Applied to the FULL frame — the caller supplies a real hair
+    mask, so unlike the old version this is NOT confined to the face oval.
 
-    img = image.astype(np.float32)
+    Desaturates the hair toward neutral grey (keeping its own luminance
+    variation, for a natural salt-and-pepper look rather than a flat painted
+    cap), then lifts it slightly so dark hair actually reads as greyer.
+    """
+    if hair_mask is None:
+        return image
 
-    try:
-        from modules.hair_segmenter import get_hair_segmenter
-        segmenter = get_hair_segmenter()
+    intensity = float(np.clip(intensity, 0, 1))
+    mask = hair_mask.astype(np.float32)
+    if mask.max() > 1.0:
+        mask = mask / 255.0
+    mask = np.clip(mask, 0.0, 1.0)
 
-        # Senin hair_segmenter.py dosyanda doğru fonksiyon bu:
-        hair_mask = segmenter.segment(image).astype(np.float32)
+    greyed = recolor_preserve_luminance(image, (190, 190, 190), mask,
+                                        strength=0.70 * intensity)
 
-    except Exception as e:
-        print("Hair segmentation failed:", e)
+    lift = (0.25 * intensity) * mask[:, :, np.newaxis]
+    greyed = greyed.astype(np.float32) * (1.0 - lift) + 205.0 * lift
+    return clip_uint8(greyed)
 
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype(np.float32)
-        s = hsv[:, :, 1]
-        v = hsv[:, :, 2]
-
-        hair_mask = ((v < 180) & (s > 20)).astype(np.float32)
-
-    hair_mask = cv2.GaussianBlur(hair_mask, (51, 51), 0)
-    hair_mask = np.clip(hair_mask, 0, 1)
-    hair_mask = hair_mask[:, :, np.newaxis]
-
-    gray_hair = img.copy()
-
-    gray_hair[:, :, 0] = 190
-    gray_hair[:, :, 1] = 190
-    gray_hair[:, :, 2] = 190
-
-    alpha = 0.85 * intensity
-
-    result = img * (1 - hair_mask * alpha) + gray_hair * (hair_mask * alpha)
-
-    return clip_uint8(result)
 
 def adjust_aging_tone(image, intensity=0.5):
+    """Sallow aging tone: desaturate, push slightly olive/sallow (less rosy,
+    less blue), drop a little luminance and flatten contrast. Older skin is
+    less saturated and less radiant than young skin."""
     intensity = np.clip(intensity, 0, 1)
 
-    alpha = 0.98 + 0.04 * intensity
-    beta = -4 * intensity
-
+    # Flatten contrast (alpha < 1) and darken slightly (beta < 0).
+    alpha = 1.0 - 0.06 * intensity
+    beta = -6.0 * intensity
     toned = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
 
+    # Desaturate.
     hsv = cv2.cvtColor(toned, cv2.COLOR_BGR2HSV).astype(np.float32)
-    hsv[:, :, 1] *= 1.0 - 0.10 * intensity
-
+    hsv[:, :, 1] *= 1.0 - 0.22 * intensity
     toned = cv2.cvtColor(
         np.clip(hsv, 0, 255).astype(np.uint8),
         cv2.COLOR_HSV2BGR
     )
 
+    # Sallow/olive cast: trim blue and red (rosiness), hold green (BGR order).
     toned = toned.astype(np.float32)
-
-    toned[:, :, 0] *= 1.0 - 0.04 * intensity
-    toned[:, :, 1] *= 1.0 + 0.02 * intensity
-    toned[:, :, 2] *= 1.0 + 0.01 * intensity
+    toned[:, :, 0] *= 1.0 - 0.08 * intensity   # B down
+    toned[:, :, 1] *= 1.0 + 0.01 * intensity   # G hold
+    toned[:, :, 2] *= 1.0 - 0.05 * intensity   # R down
 
     return clip_uint8(toned)
 
 
 def apply_aging(image, intensity=0.5, use_fft=False, use_skin_mask=True,
-                landmarks=None):
+                landmarks=None, include_body_skin=True):
     """
-    Subtle aging: mild skin-texture noise + slight desaturation and cool
-    tonal shift. No drawn wrinkles — overlays don't look real on smooth skin.
+    Natural skin aging — built from the face's own structure, no drawn marks.
+
+    Layers (all confined to the feathered skin mask):
+      1. high-frequency boost  — emphasise pores / micro-detail
+      2. deepen_skin_shadows   — darken real creases (nasolabial, under-eye,
+                                 forehead) so wrinkles deepen naturally
+      3. wrinkle texture        — subtle pore grain
+      4. sallow tone            — desaturate + olive cast + flatter, dimmer skin
+
+    Hair greying is NOT done here (it would be reverted by the face-oval blend);
+    the caller applies it separately with a real hair mask via grey_hair().
+
+    include_body_skin=False uses the cheap 1 ms landmark face-oval mask instead
+    of the ~235 ms segmentation model, for the live camera path.
     """
     if image is None:
         raise ValueError("Input image is empty.")
@@ -456,18 +508,14 @@ def apply_aging(image, intensity=0.5, use_fft=False, use_skin_mask=True,
 
     soft_intensity = intensity * 0.55
 
-    # High-pass boost amplifies existing micro-shadows (real creases, pores,
-    # eye-corner shadows). On a young face this adds subtle definition;
-    # on an older face it deepens lines that are already there.
     aged = high_frequency_boost(original, intensity)
+    aged = deepen_skin_shadows(aged, intensity)
     aged = add_wrinkle_texture(aged, soft_intensity)
-    aged = add_wrinkle_lines(aged, intensity, landmarks=landmarks)
     aged = adjust_aging_tone(aged, soft_intensity)
-    aged = add_aging_sagging(aged, intensity, landmarks=landmarks)
-    aged = add_gray_hair(aged, intensity)
 
     if use_skin_mask:
-        mask = create_face_mask(original, landmarks=landmarks)
+        mask = create_face_mask(original, landmarks=landmarks,
+                                include_body_skin=include_body_skin)
         aged = blend_with_mask(original, aged, mask)
 
     return aged
@@ -620,10 +668,12 @@ def restore_young_skin_color(image, intensity=0.5):
     return cv2.cvtColor(clip_uint8(hsv), cv2.COLOR_HSV2BGR)
 
 
-def selective_skin_smoothing(image, intensity=0.5, landmarks=None):
+def selective_skin_smoothing(image, intensity=0.5, landmarks=None,
+                             include_body_skin=True):
     intensity = np.clip(intensity, 0, 1)
 
-    skin_mask = create_face_mask(image, landmarks=landmarks)
+    skin_mask = create_face_mask(image, landmarks=landmarks,
+                                 include_body_skin=include_body_skin)
 
     smoothed = edge_preserving_smoothing(image, intensity)
     smoothed = reduce_high_frequency(smoothed, intensity)
@@ -705,10 +755,13 @@ def adjust_deaging_tone(image, intensity=0.5):
 
 
 def apply_deaging(image, intensity=0.5, use_fft=False, use_skin_mask=True,
-                  landmarks=None):
+                  landmarks=None, include_body_skin=True):
     """
     Subtle de-aging: edge-preserving smoothing of skin only. No overlays,
     no color boosting — those produced the orange forehead glow.
+
+    include_body_skin=False uses the cheap landmark face-oval mask for the
+    live camera path.
     """
     if image is None:
         raise ValueError("Input image is empty.")
@@ -719,16 +772,18 @@ def apply_deaging(image, intensity=0.5, use_fft=False, use_skin_mask=True,
     soft_intensity = intensity * 0.65
 
     deaged = selective_skin_smoothing(
-        original, soft_intensity, landmarks=landmarks
+        original, soft_intensity, landmarks=landmarks,
+        include_body_skin=include_body_skin
     )
 
     if use_skin_mask:
-        mask = create_face_mask(original, landmarks=landmarks)
+        mask = create_face_mask(original, landmarks=landmarks,
+                                include_body_skin=include_body_skin)
         deaged = blend_with_mask(original, deaged, mask)
 
     return deaged
 
-def add_aging_sagging(image, intensity=0.5, landmarks=None):
+def add_aging_sagging(image, intensity=0.5, landmarks=None, include_body_skin=True):
     if landmarks is None or len(landmarks) < 468:
         return image.copy()
 
@@ -801,29 +856,40 @@ def add_aging_sagging(image, intensity=0.5, landmarks=None):
         borderMode=cv2.BORDER_REFLECT_101
     )
 
-    mask = create_face_mask(image, landmarks=landmarks)
+    mask = create_face_mask(image, landmarks=landmarks,
+                            include_body_skin=include_body_skin)
     return blend_with_mask(image, warped, mask)
 
 # =========================================================
 # MAIN PIPELINE
 # =========================================================
 
-def aging_deaging_pipeline(image, mode="aging", intensity=0.5, landmarks=None):
+def aging_deaging_pipeline(image, mode="aging", intensity=0.5, landmarks=None,
+                           fast=False):
+    """fast=True swaps the ~235 ms segmentation skin mask for the 1 ms landmark
+    face-oval mask, making aging/de-aging cheap enough for the live camera.
+
+    This returns SKIN aging only. Hair greying is the caller's job because it
+    must run on the full image, not this (often face-cropped) input: the live
+    path greys with the background segmenter's tracked mask, and the photo path
+    (app.py) greys the composited full-resolution output via grey_hair().
+    """
     if image is None:
         raise ValueError("Input image is empty.")
 
     intensity = np.clip(intensity, 0, 1)
+    include_body_skin = not fast
 
     if mode == "aging":
         return apply_aging(
             image, intensity=intensity, use_skin_mask=True,
-            landmarks=landmarks
+            landmarks=landmarks, include_body_skin=include_body_skin
         )
 
     elif mode == "deaging":
         return apply_deaging(
             image, intensity=intensity, use_skin_mask=True,
-            landmarks=landmarks
+            landmarks=landmarks, include_body_skin=include_body_skin
         )
 
     else:

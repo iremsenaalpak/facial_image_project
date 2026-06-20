@@ -125,3 +125,44 @@ def create_polygon_mask(shape_hw, points):
     mask = np.zeros(shape_hw[:2], dtype=np.uint8)
     cv2.fillPoly(mask, [np.array(points, dtype=np.int32)], 255)
     return mask
+
+
+def constrain_mask_to_head(binary_mask, landmarks=None):
+    """Drop false-positive blobs from a hair/segmentation mask.
+
+    The selfie segmenter sometimes tags background regions (a wall, a poster)
+    as hair. On a cropped face that never shows, but on a full webcam frame it
+    paints the room. This keeps only the connected components that fall within
+    a generous box around the detected head; with no landmarks it falls back to
+    the single largest component. Input/output: uint8, values 0/1.
+    """
+    bm = (binary_mask > 0).astype(np.uint8)
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(bm, connectivity=8)
+    if num <= 1:
+        return bm  # only background
+
+    if landmarks and len(landmarks) > 0:
+        xs = [p[0] for p in landmarks]
+        ys = [p[1] for p in landmarks]
+        x0, x1 = min(xs), max(xs)
+        y0, y1 = min(ys), max(ys)
+        fw = max(x1 - x0, 1)
+        fh = max(y1 - y0, 1)
+        # Generous head region — hair rises well above the forehead.
+        rx0, rx1 = x0 - 0.5 * fw, x1 + 0.5 * fw
+        ry0, ry1 = y0 - 1.2 * fh, y1 + 0.4 * fh
+
+        keep = np.zeros_like(bm)
+        for lbl in range(1, num):
+            cx0 = stats[lbl, cv2.CC_STAT_LEFT]
+            cy0 = stats[lbl, cv2.CC_STAT_TOP]
+            cx1 = cx0 + stats[lbl, cv2.CC_STAT_WIDTH]
+            cy1 = cy0 + stats[lbl, cv2.CC_STAT_HEIGHT]
+            # Keep the component if its bbox overlaps the head region at all.
+            if cx1 >= rx0 and cx0 <= rx1 and cy1 >= ry0 and cy0 <= ry1:
+                keep[labels == lbl] = 1
+        return keep
+
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    largest = 1 + int(np.argmax(areas))
+    return (labels == largest).astype(np.uint8)
