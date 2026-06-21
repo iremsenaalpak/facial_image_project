@@ -43,35 +43,44 @@ app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 camera = None
+camera_running = False
 
 
 def generate_camera_frames():
-    global camera
+    global camera, camera_running
 
     camera = cv2.VideoCapture(0)
+    camera_running = True
 
-    while True:
-        success, frame = camera.read()
+    try:
+        # Loop exits as soon as /stop_camera flips the flag (e.g. the user picks
+        # an uploaded photo), so the webcam is released and its light turns off.
+        while camera_running:
+            success, frame = camera.read()
 
-        if not success:
-            break
+            if not success:
+                break
 
-        frame = cv2.flip(frame, 1)
+            frame = cv2.flip(frame, 1)
 
-        frame = process_frame(frame)
+            frame = process_frame(frame)
 
-        ret, buffer = cv2.imencode(".jpg", frame)
+            ret, buffer = cv2.imencode(".jpg", frame)
 
-        if not ret:
-            continue
+            if not ret:
+                continue
 
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
-        )
-
-    camera.release()
-    camera = None
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
+            )
+    finally:
+        # Runs on stop, on client disconnect (GeneratorExit), and on error, so
+        # the camera is always released.
+        if camera is not None:
+            camera.release()
+        camera = None
+        camera_running = False
 
 
 @app.get("/camera_feed")
@@ -80,6 +89,15 @@ def camera_feed():
         generate_camera_frames(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+
+@app.post("/stop_camera")
+def stop_camera():
+    """Signal the streaming loop to stop so the webcam is released right away
+    when the user switches away from the live camera (e.g. selects a photo)."""
+    global camera_running
+    camera_running = False
+    return JSONResponse({"status": "stopped"})
 
 
 @app.post("/set_effect")

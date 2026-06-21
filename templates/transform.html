@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BeautyDSP Virtual Studio</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=165">
+    <link rel="stylesheet" href="/static/css/style.css?v=166">
     <style>
         .circle-avatar {
             border-radius: 50% !important;
@@ -137,14 +137,18 @@
 
                     <div class="image-box">
                         <small>FILTER RESULT</small>
-                        <img src="{{ transformed_image if transformed_image else '' }}"
+                        <img id="filterResultPreview"
+                             src="{{ transformed_image if transformed_image else '' }}"
                              style="width:100%; border-radius:12px;">
                     </div>
                 </div>
             </div>
 
             <div class="panel">
-                <button type="submit" class="apply-btn">🛍️ Apply Selected Effects</button>
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <button type="submit" class="apply-btn" style="flex:2; margin-bottom:0;">🛍️ Apply Selected Effects</button>
+                    <button type="button" class="apply-btn clear-btn" style="flex:1; margin-bottom:0;" onclick="clearAllEffects()">🧹 Clear All</button>
+                </div>
 
                 <div id="category_title"
                      style="font-weight:bold; margin-bottom:15px; color:#D38E8A; text-transform:uppercase; font-size:14px; margin-top:15px;">
@@ -196,6 +200,14 @@
             <img src="/assets/lipsticks/revlon.png" style="width:38px;height:48px;object-fit:contain;">
         </div>
         <div class="filter-title">Revlon Black</div>
+    </label>
+<!-- RUJ EKLEME KISMI MESELAAAA -->
+        <label class="filter-circle-card">
+        <input type="radio" name="lip_preset" value="#e8674f" onclick="setLip('#e8674f')">
+        <div class="circle-avatar" color:#fff;">
+        <img src="/assets/lipsticks/download (1).jpg" style="width:38px;height:48px;object-fit:contain;">
+        </div>
+        <div class="filter-title">Coral Crush</div>
     </label>
 
     <input type="checkbox" name="creative" value="lip_color" id="lip_check" style="display:none">
@@ -686,6 +698,52 @@ async function pushLiveSettings() {
     }
 }
 
+// Reset every effect control back to its default (no-effect) state. Serves both
+// modes from the one shared form: the live camera feed clears via the final
+// pushLiveSettings(), and the uploaded-photo result preview is reset to the
+// original so the cleared state is visible without re-clicking Apply.
+function clearAllEffects() {
+    // Re-check the "None" option in every effect group (each group has a
+    // value="none" sentinel radio); this also clears the highlighted card.
+    document.querySelectorAll('.filter-carousel input[type="radio"][value="none"]')
+        .forEach(r => r.checked = true);
+
+    // Turn off the creative on/off flags (lip / hair / eye / frame).
+    ['lip_check', 'chk_hair', 'chk_eye', 'chk_frame']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+
+    // Reset the hidden fields the form submits back to their defaults.
+    document.getElementById('hiddenMode').value = 'none';
+    document.getElementById('sticker_effect').value = 'none';
+    document.getElementById('frame_style').value = 'classic';
+    document.getElementById('lip_color_hex').value = '#c97b74';
+    document.getElementById('eye_color_hex').value = '#1e6db5';
+    document.getElementById('hair_color_hex').value = '#4a2c0a';
+
+    // Reset intensity to its default and update the label.
+    const sl = document.getElementById('intensitySlider');
+    if (sl) {
+        sl.value = '1.0';
+        const sv = document.getElementById('sliderValue');
+        if (sv) sv.textContent = '1.0';
+    }
+
+    // Squared-off corners are only for an active frame — restore the rounding.
+    const feed = document.getElementById('cameraFeed');
+    if (feed) feed.style.borderRadius = '15px';
+
+    // Uploaded photo: mirror the original into the result box so the cleared
+    // state shows immediately (the server result only updates on Apply).
+    const orig = document.getElementById('originalPreview');
+    const res = document.getElementById('filterResultPreview');
+    if (res && orig && orig.getAttribute('src')) {
+        res.src = orig.getAttribute('src');
+    }
+
+    // Live camera: push the cleared settings so the feed updates right away.
+    pushLiveSettings();
+}
+
 function switchTab(id, title) {
     document.querySelectorAll('.filter-carousel').forEach(c => c.style.display = 'none');
     document.getElementById('tab_' + id).style.display = 'flex';
@@ -711,6 +769,22 @@ function openRealtimeCamera() {
 
     // Apply whatever is already selected so the feed starts correct.
     pushLiveSettings();
+}
+
+// Stop the live preview and hide the camera panel. Clearing the <img> src ends
+// the MJPEG stream request, and /stop_camera releases the webcam server-side so
+// the camera actually turns off (not just hidden). We also drop any
+// captured-frame data so a stale camera shot can't be submitted instead of a
+// later file selection (the server prefers camera_data over the uploaded file).
+function stopRealtimeCamera() {
+    const feed = document.getElementById("cameraFeed");
+    if (feed) feed.src = "";
+    if (cameraSection) cameraSection.style.display = "none";
+    if (cameraDataInput) cameraDataInput.value = "";
+
+    // Best-effort: tell the server to release the webcam. Ignore failures
+    // (nothing to stop if the camera was never opened).
+    fetch("/stop_camera", { method: "POST" }).catch(() => {});
 }
 
 document.getElementById('btnCapture').addEventListener('click', () => {
@@ -742,7 +816,16 @@ if (fileInput && originalPreview) {
     fileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
 
+        // No file (dialog cancelled) — leave the current view untouched.
         if (!file) return;
+
+        // A new photo was chosen: stop the live camera if it's running.
+        stopRealtimeCamera();
+
+        // Clear any previous filter result so only the new original shows until
+        // the user hits Apply (which re-renders the result server-side).
+        const result = document.getElementById('filterResultPreview');
+        if (result) result.src = '';
 
         const reader = new FileReader();
 

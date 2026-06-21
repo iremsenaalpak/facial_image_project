@@ -190,6 +190,15 @@ body {
     background: #544743;
 }
 
+/* Secondary "reset" action — rose accent so it reads as distinct from Apply */
+.clear-btn {
+    background: #D38E8A;
+}
+
+.clear-btn:hover {
+    background: #C2786F;
+}
+
 .intensity-box {
     background: #FAF8F5;
     padding: 14px;
